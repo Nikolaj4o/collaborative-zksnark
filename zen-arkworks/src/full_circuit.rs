@@ -3,6 +3,7 @@ use crate::fc_circuit::*;
 use crate::kzgcom_circuit::*;
 use crate::poly_circuit::PolyCircuit;
 use crate::poseidon_circuit::PosedionCircuit;
+use crate::poseidon_circuit::PosedionCircuitU8;
 use crate::psponge::SPNGCircuit;
 use crate::psponge::SPNGOutput;
 use crate::psponge::SPNGParam;
@@ -314,6 +315,8 @@ pub struct FullCircuitOpLv3PoseidonClassification<F: PrimeField> {
 
     pub params: <PoseidonSponge<F> as CryptographicSponge>::Parameters,
     pub commit: Vec<F>,
+    pub commit_u8: Vec<u8>,
+    pub is_u8: bool,
 }
 
 impl <F: PrimeField>ConstraintSynthesizer<F> for FullCircuitOpLv3PoseidonClassification<F>{
@@ -368,10 +371,17 @@ impl <F: PrimeField>ConstraintSynthesizer<F> for FullCircuitOpLv3PoseidonClassif
         };
 
         let com_circuit = PosedionCircuit {
-            param: self.params.clone(),
-            input: commit_ipt_fvar.clone(),
-            output: self.commit.clone()
+                param: self.params.clone(),
+                input: commit_ipt_fvar.clone(),
+                output: self.commit.clone()
         };
+        let com_circuit_u8 = PosedionCircuitU8 {
+                param: self.params.clone(),
+                input: self.commit_u8,
+                output: self.commit.clone()
+        };
+    
+
 
         // let l1_com_circuit = PosedionCircuit {
         //     param: self.params.clone(),
@@ -399,10 +409,18 @@ impl <F: PrimeField>ConstraintSynthesizer<F> for FullCircuitOpLv3PoseidonClassif
             .clone()
             .generate_constraints(cs.clone())
             .unwrap();
-        com_circuit
+        if self.is_u8 {
+            com_circuit_u8
             .clone()
             .generate_constraints(cs.clone())
             .unwrap();
+        } else {
+            com_circuit
+            .clone()
+            .generate_constraints(cs.clone())
+            .unwrap();
+        }
+
         // l1_com_circuit
         //     .clone()
         //     .generate_constraints(cs.clone())

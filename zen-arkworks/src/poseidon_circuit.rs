@@ -25,6 +25,7 @@ use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::ConstraintSystem;
 use ark_relations::*;
 use ark_groth16::*;
+use blake2::digest::generic_array::typenum::UInt;
 use crate::*;
 use ark_std::{rand::SeedableRng,vec::Vec};
 
@@ -48,6 +49,39 @@ impl <F: PrimeField>ConstraintSynthesizer<F> for PosedionCircuit<F>{
 
         let mut constraint_sponge = pos_param_var;
         constraint_sponge.absorb(&self.input).unwrap();
+
+        let squeeze = constraint_sponge.squeeze_field_elements(1).unwrap();
+        let outputvar: Vec<_> = self.output.iter()
+            .map(|v| FpVar::new_input(ns!(cs, "absorb1"), || Ok(*v)).unwrap())
+            .collect();
+        squeeze.enforce_equal(&outputvar).unwrap();
+        println!(
+            "Number of constraints for PoseidonCircuit Circuit {}, Accumulated constraints {} avg per input {}, ",
+            cs.num_constraints() - _cir_number,
+            cs.num_constraints(),
+            (cs.num_constraints() - _cir_number) / self.input.len()
+        );
+		Ok(())
+	}
+}
+
+#[derive(Clone)]
+pub struct PosedionCircuitU8<F: PrimeField> {
+	pub param: PoseidonParameters<F>,
+	pub input: Vec<u8>,
+	pub output: Vec<F>
+}
+
+
+impl <F: PrimeField>ConstraintSynthesizer<F> for PosedionCircuitU8<F>{
+	/// Input a circuit, build the constraint system and add it to `cs`
+	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError>{
+        println!("input len: {} ", self.input.len());
+        let _cir_number = cs.num_constraints();
+        let pos_param_var =  PoseidonSpongeVar::<F>::new(cs.clone(),&self.param);      
+        let input_vars: Vec<UInt8<F>> = self.input.iter().map(|x| UInt8::new_witness(ns!(cs, "absorb1"), || Ok(*x)).unwrap()).collect();
+        let mut constraint_sponge = pos_param_var;
+        constraint_sponge.absorb(&input_vars).unwrap();
 
         let squeeze = constraint_sponge.squeeze_field_elements(1).unwrap();
         let outputvar: Vec<_> = self.output.iter()
