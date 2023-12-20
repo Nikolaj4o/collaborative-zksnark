@@ -31,7 +31,7 @@ mod silly;
 const TIMED_SECTION_LABEL: &str = "timed section";
 
 trait SnarkBench {
-    fn local<E: PairingEngine>(n: usize, timer_label: &str);
+    fn local<E: PairingEngine>(n: usize, timer_label: &str, commit_type: u8);
     fn ark_local<E: PairingEngine>(_n: usize, _timer_label: &str) {
         unimplemented!("ark benchmark for {}", std::any::type_name::<Self>())
     }
@@ -111,6 +111,7 @@ mod shallownet_mnist {
             l2_mat_0: u8,
             multiplier_l1: Vec<f32>,
             multiplier_l2: Vec<f32>,
+            is_u8: bool ,
         ) -> FullCircuitOpLv3PoseidonClassification<<E as ark_ec::PairingEngine>::Fr> where <E as ark_ec::PairingEngine>::Fr: Absorb {
             let mut y = vec![0u8; l1.len()];
             let l1_mat_ref: Vec<&[u8]> = l1.iter().map(|x| x.as_ref()).collect();
@@ -187,13 +188,25 @@ mod shallownet_mnist {
             let mut commit_sponge = PoseidonSponge::< >::new(&parameter);
             let l1_f_1d = convert_2d_vector_into_1d(l1_f.clone());
             let l2_f_1d = convert_2d_vector_into_1d(l2_f.clone());
+            let l1_1d = convert_2d_vector_into_1d(l1);
+            let l2_1d = convert_2d_vector_into_1d(l2);
+            let mut commit_vec_u8 = Vec::<u8>::new();
             let mut commit_vec = Vec::<E::Fr>::new();
-            commit_vec.extend(x_f.clone());
-            commit_vec.extend(l1_f_1d);
-            commit_vec.extend(l2_f_1d);
-            commit_vec.extend(z_f.clone());
+            if is_u8 {
+                commit_vec_u8.extend(x);
+                commit_vec_u8.extend(l1_1d);
+                commit_vec_u8.extend(l2_1d);
+                commit_vec_u8.extend(z);
+                commit_sponge.absorb(&commit_vec_u8);
+            } else {
+                commit_vec.extend(x_f.clone());
+                commit_vec.extend(l1_f_1d);
+                commit_vec.extend(l2_f_1d);
+                commit_vec.extend(z_f.clone());
+                commit_sponge.absorb(&commit_vec);
+            }
 
-            commit_sponge.absorb(&commit_vec);
+
             //let x_squeeze: Vec<E::Fr> = x_sponge.squeeze_native_field_elements(1);//x.clone().len() / 32 + 1);
             //commit_sponge.absorb(&l1_f_1d);
             //let l1_squeeze: Vec<E::Fr> = l1_sponge.squeeze_native_field_elements(1);//l1_f_1d.len() / 32 + 1);
@@ -201,7 +214,6 @@ mod shallownet_mnist {
             //let l2_squeeze: Vec<E::Fr> = l2_sponge.squeeze_native_field_elements(1);//l2_f_1d.len() / 32 + 1);
             //commit_sponge.absorb(&z_f);
             let commit_squeeze: Vec<E::Fr> = commit_sponge.squeeze_native_field_elements(1);//z.clone().len() / 32 + 1);
-
             let full_circuit = FullCircuitOpLv3PoseidonClassification {
                 x: x_f,
                 l1: l1_f,
@@ -230,7 +242,9 @@ mod shallownet_mnist {
                 
                 //poseidon stuff
                 params: parameter,
+                commit_u8: commit_vec_u8,
                 commit: commit_squeeze,
+                is_u8
             };
             full_circuit
         }
@@ -705,7 +719,7 @@ mod shallownet_mnist {
         //     full_circuit_mpc
         // }
         impl SnarkBench for Groth16Bench {
-            fn local<E: PairingEngine>(_n: usize, timer_label: &str) {
+            fn local<E: PairingEngine>(_n: usize, timer_label: &str, commit_type:u8) {
                 let mut rng = test_rng();
                 //let (x, l1_mat, l2_mat): (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) = read_shallownet_inputs_u8();
                 let x: Vec<u8> = read_vector1d("pretrained_model/shallownet/X_q.txt".to_string(), 784); // only read one image
@@ -758,21 +772,38 @@ mod shallownet_mnist {
                 let classification_res = argmax_u8(z.clone());
 
                 // CIRCS
-                
-                let full_circuit = gen_circ_full_poseidon::<Bls12<ark_bls12_377::Parameters>>(
-                    x.clone(),
-                    l1_mat,
-                    l2_mat, 
-                    z.clone(), 
-                    classification_res, 
-                    x_0[0], 
-                    l1_output_0[0], 
-                    l2_output_0[0], 
-                    l1_mat_0[0], 
-                    l2_mat_0[0], 
-                    l1_mat_multiplier, 
-                    l2_mat_multiplier
-                );
+                let full_circuit = match commit_type {
+                    0 => gen_circ_full_poseidon::<Bls12<ark_bls12_377::Parameters>>(
+                        x.clone(),
+                        l1_mat,
+                        l2_mat, 
+                        z.clone(), 
+                        classification_res, 
+                        x_0[0], 
+                        l1_output_0[0], 
+                        l2_output_0[0], 
+                        l1_mat_0[0], 
+                        l2_mat_0[0], 
+                        l1_mat_multiplier, 
+                        l2_mat_multiplier,
+                        true
+                    ),
+                    1 => gen_circ_full_poseidon::<Bls12<ark_bls12_377::Parameters>>(
+                        x.clone(),
+                        l1_mat,
+                        l2_mat, 
+                        z.clone(), 
+                        classification_res, 
+                        x_0[0], 
+                        l1_output_0[0], 
+                        l2_output_0[0], 
+                        l1_mat_0[0], 
+                        l2_mat_0[0], 
+                        l1_mat_multiplier, 
+                        l2_mat_multiplier,
+                        false
+                    ),
+                };
 
                 println!("start generating random parameters");
                 let begin = Instant::now();
@@ -1060,7 +1091,8 @@ struct Opt {
 impl Opt {}
 
 fn main() {
-    shallownet_mnist::groth::Groth16Bench::local::<ark_bls12_381::Bls12_381>(0, TIMED_SECTION_LABEL);
+    shallownet_mnist::groth::Groth16Bench::local::<ark_bls12_381::Bls12_381>(0, TIMED_SECTION_LABEL, 0);
+    shallownet_mnist::groth::Groth16Bench::local::<ark_bls12_381::Bls12_381>(0, TIMED_SECTION_LABEL, 1);
     // MpcMultiNet::init_from_file( "./data/2", 0);
     // shallownet_mnist::groth::Groth16Bench::mpc::<ark_bls12_381::Bls12_381, mpc_algebra::share::gsz20::GszPairingShare<ark_bls12_381::Bls12_381>>(0, TIMED_SECTION_LABEL);
     // let opt = Opt::from_args();
