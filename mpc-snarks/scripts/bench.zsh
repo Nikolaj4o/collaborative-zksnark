@@ -67,7 +67,7 @@ case $infra in
         done
     ;;
     local)
-        $BIN -p $proof -c squaring --computation-size $size local > logloc.log #| rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'
+        $BIN -p $proof -c squaring --computation-size $size local #| rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'
     ;;
     ark-local)
         $BIN -p $proof -c squaring --computation-size $size ark-local | rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'
