@@ -1062,7 +1062,7 @@ impl FieldOpt {
             FieldOpt::Mpc { party_info, .. } => {
                 party_info.run::<E, B>(computation, computation_size, b, timed_label)
             }
-            FieldOpt::Local => B::local::<E>(computation_size, timed_label),
+            FieldOpt::Local => B::local::<E>(computation_size, timed_label, 0),
             FieldOpt::ArkLocal => B::ark_local::<E>(computation_size, timed_label),
         }
         self.teardown();
