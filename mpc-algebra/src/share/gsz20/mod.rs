@@ -97,7 +97,9 @@ pub fn t() -> usize {
 
 pub fn domain<F: FftField>() -> &'static MixedRadixEvaluationDomain<F> {
     SHARE_DOMAIN.get_or_init(|| {
+        println!("before d");
         let d = MixedRadixEvaluationDomain::<F>::new(Net::n_parties()).unwrap();
+        println!("after d");
         assert_eq!(d.size(), Net::n_parties(),
             "Attempted to build an evaluation domain of size {}, but could only get one of size {}.\nThis domain is needed in order to support Shamir shares for this many parties", Net::n_parties(), d.size(), );
         Box::new(d)
@@ -1046,6 +1048,8 @@ pub mod group {
     }
 
     fn open_degree_vec<G: Group>(shares: Vec<G>, d: usize) -> G {
+        println!("open degree veccc");
+        println!("GROUP G {}", std::any::type_name::<G>());
         let domain = domain::<G::ScalarField>();
         let n = Net::n_parties();
         let n_inv = G::ScalarField::from(n as u32).inverse().unwrap();
@@ -1092,6 +1096,7 @@ pub mod group {
         new_degree: usize,
         f: Func,
     ) -> GszGroupShare<G, M> {
+        println!("KIng compute");
         let king_answer = Net::send_to_king(&share.val).map(|shares| {
             let n = shares.len();
             let value = open_degree_vec(shares, share.degree);

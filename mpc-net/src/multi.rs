@@ -143,7 +143,7 @@ impl Connections {
         self.id == 0
     }
     fn broadcast(&mut self, bytes_out: &[u8]) -> Vec<Vec<u8>> {
-        let timer = start_timer!(|| format!("Broadcast {}", bytes_out.len()));
+        //let timer = start_timer!(|| format!("Broadcast {}", bytes_out.len()));
         let m = bytes_out.len();
         let own_id = self.id;
         self.stats.bytes_sent += (self.peers.len() - 1) * m;
@@ -169,11 +169,11 @@ impl Connections {
                 bytes_in
             })
             .collect();
-        end_timer!(timer);
+        //end_timer!(timer);
         r
     }
     fn send_to_king(&mut self, bytes_out: &[u8]) -> Option<Vec<Vec<u8>>> {
-        let timer = start_timer!(|| format!("To king {}", bytes_out.len()));
+        //let timer = start_timer!(|| format!("To king {}", bytes_out.len()));
         let m = bytes_out.len();
         let own_id = self.id;
         self.stats.to_king += 1;
@@ -205,7 +205,7 @@ impl Connections {
                 .unwrap();
             None
         };
-        end_timer!(timer);
+        //end_timer!(timer);
         r
     }
     fn recv_from_king(&mut self, bytes_out: Option<Vec<Vec<u8>>>) -> Vec<u8> {
@@ -214,7 +214,7 @@ impl Connections {
         if self.am_king() {
             let bytes_out = bytes_out.unwrap();
             let m = bytes_out[0].len();
-            let timer = start_timer!(|| format!("From king {}", m));
+            //let timer = start_timer!(|| format!("From king {}", m));
             let bytes_size = (m as u64).to_le_bytes();
             self.stats.bytes_sent += (self.peers.len() - 1) * (m + 8);
             self.peers
@@ -227,7 +227,7 @@ impl Connections {
                     stream.write_all(&bytes_size).unwrap();
                     stream.write_all(&bytes_out[id]).unwrap();
                 });
-            end_timer!(timer);
+            //end_timer!(timer);
             bytes_out[own_id].clone()
         } else {
             let stream = self.peers[0].stream.as_mut().unwrap();

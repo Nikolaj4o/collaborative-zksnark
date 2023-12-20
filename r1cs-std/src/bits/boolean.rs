@@ -685,6 +685,8 @@ impl<F: Field> Boolean<F> {
         bits: &[Self],
         element: impl AsRef<[u64]>,
     ) -> Result<Vec<Self>, SynthesisError> {
+
+
         let b: &[u64] = element.as_ref();
 
         let mut bits_iter = bits.iter().rev(); // Iterate in big-endian
@@ -698,6 +700,7 @@ impl<F: Field> Boolean<F> {
             element_num_bits += 1;
         }
 
+
         if bits.len() > element_num_bits {
             let mut or_result = Boolean::constant(false);
             for should_be_zero in &bits[element_num_bits..] {
@@ -706,6 +709,7 @@ impl<F: Field> Boolean<F> {
             }
             or_result.enforce_equal(&Boolean::constant(false))?;
         }
+
 
         for (b, a) in BitIteratorBE::without_leading_zeros(b).zip(bits_iter.by_ref()) {
             if b {

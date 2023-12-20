@@ -27,7 +27,7 @@ pub fn create_random_proof<E, C, R>(
     circuit: C,
     pk: &ProvingKey<E>,
     rng: &mut R,
-) -> R1CSResult<Proof<E>>
+) -> R1CSResult<(Vec<E::Fr>, Proof<E>)>
 where
     E: PairingEngine,
     //E::Fr: BatchProd,
@@ -45,21 +45,21 @@ where
     create_proof::<E, C>(circuit, pk, r, s)
 }
 
-/// Create a Groth16 proof that is *not* zero-knowledge.
-#[inline]
-pub fn create_proof_no_zk<E, C>(circuit: C, pk: &ProvingKey<E>) -> R1CSResult<Proof<E>>
-where
-    E: PairingEngine,
-    //E::Fr: BatchProd,
-    C: ConstraintSynthesizer<<E as PairingEngine>::Fr>,
-{
-    create_proof::<E, C>(
-        circuit,
-        pk,
-        <E as PairingEngine>::Fr::zero(),
-        <E as PairingEngine>::Fr::zero(),
-    )
-}
+// /// Create a Groth16 proof that is *not* zero-knowledge.
+// #[inline]
+// pub fn create_proof_no_zk<E, C>(circuit: C, pk: &ProvingKey<E>) -> R1CSResult<Proof<E>>
+// where
+//     E: PairingEngine,
+//     //E::Fr: BatchProd,
+//     C: ConstraintSynthesizer<<E as PairingEngine>::Fr>,
+// {
+//     create_proof::<E, C>(
+//         circuit,
+//         pk,
+//         <E as PairingEngine>::Fr::zero(),
+//         <E as PairingEngine>::Fr::zero(),
+//     )
+// }
 
 /// Create a Groth16 proof using randomness `r` and `s`.
 #[inline]
@@ -68,7 +68,7 @@ pub fn create_proof<E, C>(
     pk: &ProvingKey<E>,
     r: <E as PairingEngine>::Fr,
     s: <E as PairingEngine>::Fr,
-) -> R1CSResult<Proof<E>>
+) -> R1CSResult<(Vec<E::Fr>, Proof<E>)>
 where
     E: PairingEngine,
     //E::Fr: BatchProd,
@@ -117,9 +117,7 @@ where
     end_timer!(c_acc_time);
 
     let assignment: Vec<<E as PairingEngine>::Fr> = prover.instance_assignment[1..].iter().chain(prover.witness_assignment.iter()).cloned().collect();
-    drop(prover);
-    drop(cs);
-
+    let pub_input = prover.instance_assignment[1..].to_vec();
     // Compute A
     let a_acc_time = start_timer!(|| "Compute A");
     let r_g1 = pk.delta_g1.scalar_mul(r);
@@ -169,12 +167,12 @@ where
     end_timer!(prover_crypto_time);
 
     end_timer!(prover_time);
-
-    Ok(Proof {
+    Ok((pub_input, 
+        Proof {
         a: g_a.into_affine(),
         b: g2_b.into_affine(),
         c: g_c.into_affine(),
-    })
+    }))
 }
 
 /// Given a Groth16 proof, returns a fresh proof of the same statement. For a proof π of a

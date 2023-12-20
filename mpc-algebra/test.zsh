@@ -2,7 +2,7 @@ set -ex
 trap "exit" INT TERM
 trap "kill 0" EXIT
 
-cargo build --example gsz20
+cargo +nightly build --example gsz20
 BIN=./target/debug/examples/gsz20
 
 for n_parties in 3 4

@@ -1,4 +1,5 @@
 #![macro_use]
+use ark_ff::PrimeField;
 use ark_std::{collections::BTreeMap, marker::PhantomData, rc::Rc};
 use rand::Rng;
 
@@ -42,6 +43,30 @@ pub trait Reveal: Sized {
     fn deinit_protocol() {}
 }
 
+// impl <T: PrimeField> Reveal for T {
+//     type Base = T;
+
+//     fn reveal(self) -> Self::Base {
+//         self
+//     }
+
+//     fn from_add_shared(b: Self::Base) -> Self {
+//         b
+//     }
+
+//     fn from_public(b: Self::Base) -> Self {
+//         b
+//     }
+
+//     fn unwrap_as_public(self) -> Self::Base {
+//         self
+//     }
+
+//     fn king_share<R: Rng>(b: Self::Base, _rng: &mut R) -> Self {
+//         b
+//     }
+// }
+
 impl Reveal for usize {
     type Base = usize;
 
@@ -65,6 +90,108 @@ impl Reveal for usize {
         b
     }
 }
+
+impl Reveal for u32 {
+    type Base = u32;
+
+    fn reveal(self) -> Self::Base {
+        self
+    }
+
+    fn from_add_shared(b: Self::Base) -> Self {
+        b
+    }
+
+    fn from_public(b: Self::Base) -> Self {
+        b
+    }
+
+    fn unwrap_as_public(self) -> Self::Base {
+        self
+    }
+
+    fn king_share<R: Rng>(b: Self::Base, _rng: &mut R) -> Self {
+        b
+    }
+}
+
+impl Reveal for u64 {
+    type Base = u64;
+
+    fn reveal(self) -> Self::Base {
+        self
+    }
+
+    fn from_add_shared(b: Self::Base) -> Self {
+        b
+    }
+
+    fn from_public(b: Self::Base) -> Self {
+        b
+    }
+
+    fn unwrap_as_public(self) -> Self::Base {
+        self
+    }
+
+    fn king_share<R: Rng>(b: Self::Base, _rng: &mut R) -> Self {
+        b
+    }
+}
+
+impl Reveal for bool {
+    type Base = bool;
+
+    fn reveal(self) -> Self::Base {
+        self
+    }
+
+    fn from_add_shared(b: Self::Base) -> Self {
+        b
+    }
+
+    fn from_public(b: Self::Base) -> Self {
+        b
+    }
+
+    fn unwrap_as_public(self) -> Self::Base {
+        self
+    }
+
+    fn king_share<R: Rng>(b: Self::Base, _rng: &mut R) -> Self {
+        b
+    }
+}
+
+// impl <T: Reveal + PrimeField> Reveal for T {
+//     type Base = PhantomData<T::Base>;
+
+//     fn reveal(self) -> Self::Base {
+//         PhantomData::default()
+//     }
+
+//     fn from_add_shared(_b: Self::Base) -> Self {
+//         PhantomData::default()
+//     }
+
+//     fn from_public(_b: Self::Base) -> Self {
+//         PhantomData::default()
+//     }
+//     fn unwrap_as_public(self) -> Self::Base {
+//         PhantomData::default()
+//     }
+//     fn king_share<R: Rng>(_b: Self::Base, _rng: &mut R) -> Self {
+//         PhantomData::default()
+//     }
+
+//     fn init_protocol() {
+//         T::init_protocol()
+//     }
+
+//     fn deinit_protocol() {
+//         T::deinit_protocol()
+//     }
+// }
 
 impl<T: Reveal> Reveal for PhantomData<T> {
     type Base = PhantomData<T::Base>;

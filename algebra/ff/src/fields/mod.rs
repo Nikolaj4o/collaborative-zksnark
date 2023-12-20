@@ -34,7 +34,6 @@ pub mod models;
 pub use self::models::*;
 
 pub mod poly_stub;
-
 #[cfg(feature = "parallel")]
 use ark_std::cmp::max;
 #[cfg(feature = "parallel")]

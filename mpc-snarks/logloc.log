@@ -1,0 +1,24 @@
+start generating random parameters
+Start:   Groth16::Generator
+··Start:   Constraint synthesis
+is setup mode?: true
+Number of constraints for FC1 100480 accumulated constraints 100480
+Number of constraints for ReLU1 384 accumulated constraints 100864
+is setup mode?: true
+Number of constraints for FC2 1290 accumulated constraints 102154
+Total number of FullCircuit inference constraints 102154
+Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 122304
+input len: 102426 
+Number of constraints for PoseidonCircuit Circuit 13571441, Accumulated constraints 13693745 avg per input 132, 
+··End:     Constraint synthesis ....................................................141.023s
+··Start:   Inlining LCs
+··End:     Inlining LCs ............................................................490.826s
+··Start:   Constructing evaluation domain
+··End:     Constructing evaluation domain ..........................................138.791µs
+··Start:   R1CS to QAP Instance Map with Evaluation
+····Start:   Evaluate Lagrange coefficients
+····End:     Evaluate Lagrange coefficients ........................................20.317s
+··End:     R1CS to QAP Instance Map with Evaluation ................................291.105s
+··Start:   Compute G2 table
+··End:     Compute G2 table ........................................................38.026s
+··Start:   Calculate B G2

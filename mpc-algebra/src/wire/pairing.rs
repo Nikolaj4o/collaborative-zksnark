@@ -8,7 +8,7 @@ use ark_serialize::{
     CanonicalSerializeWithFlags, Flags, SerializationError,
 };
 use ark_std::io::{self, Read, Write};
-use ark_std::{end_timer, start_timer};
+use ark_std::{end_timer, start_timer, test_rng};
 use core::ops::*;
 use derivative::Derivative;
 use rand::Rng;
@@ -745,13 +745,34 @@ macro_rules! impl_aff_proj {
             }
             fn multi_scalar_mul(bases: &[Self], scalars: &[Self::ScalarField]) -> Self::Projective {
                 let b = {
+                    let rng = &mut test_rng();
+                    /*for scalar in scalars {
+                        if( !scalar.is_shared()) { 
+                            println!("{}", scalar);
+                        }
+                    }*/
+                    //println!("{:?}", scalars);
                     assert!(bases.iter().all(|b| !b.is_shared()));
                     let scalars_shared = scalars.first().map(|s| s.is_shared()).unwrap_or(true);
-                    assert!(scalars.iter().all(|b| scalars_shared == b.is_shared()));
+                    let mut shared_scalars: &Vec<Self::ScalarField> = &scalars.to_vec();
+                    let tmp_shared_scalars: Vec<Self::ScalarField>;
+
+                    if (!scalars.iter().all(|b| scalars_shared == b.is_shared())) {
+                        tmp_shared_scalars = shared_scalars
+                            .iter()
+                            .map(|x: &Self::ScalarField| match x {
+                                    Self::ScalarField::Public(y) => Self::ScalarField::king_share(*y, rng),
+                                    _ => *x,
+                                }
+                            ).collect();
+                        shared_scalars = &tmp_shared_scalars;
+                    }
+
+                    assert!(shared_scalars.iter().all(|b| scalars_shared == b.is_shared()));
                     let bases =
                         MpcGroup::all_public_or_shared(bases.into_iter().map(|i| i.val.clone()))
                             .unwrap();
-                    match MpcField::all_public_or_shared(scalars.into_iter().cloned()) {
+                    match MpcField::all_public_or_shared(shared_scalars.into_iter().cloned()) {
                         Ok(pub_scalars) => {
                             let t = start_timer!(|| "MSM inner");
                             let r = $w_pro {

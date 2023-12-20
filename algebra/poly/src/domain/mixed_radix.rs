@@ -63,26 +63,30 @@ impl<F: FftField> EvaluationDomain<F> for MixedRadixEvaluationDomain<F> {
     /// Construct a domain that is large enough for evaluations of a polynomial
     /// having `num_coeffs` coefficients.
     fn new(num_coeffs: usize) -> Option<Self> {
+        println!("HELLOOO");
         let small_subgroup_base = F::FftParams::SMALL_SUBGROUP_BASE?;
 
         // Compute the best size of our evaluation domain.
+        println!("HELLOOO00");
         let num_coeffs = best_mixed_domain_size::<F>(num_coeffs);
 
         // Compute the size of our evaluation domain
+        println!("HELLOOO011");
         let q = usize::try_from(small_subgroup_base).unwrap();
         let q_adicity = k_adicity(q, num_coeffs);
         let q_part = q.pow(q_adicity);
-
+        println!("HELLOOO1");
         let two_adicity = k_adicity(2, num_coeffs);
         let two_part = 1 << two_adicity;
 
         let size = u64::try_from(num_coeffs).unwrap();
         let log_size_of_group = two_adicity;
-
+        
         if num_coeffs != q_part * two_part {
+            println!("got None");
             return None;
         }
-
+        println!("HELLOOO2");
         // Compute the generator for the multiplicative subgroup.
         // It should be the num_coeffs root of unity.
         let group_gen = F::get_root_of_unity(num_coeffs)?;
@@ -90,7 +94,7 @@ impl<F: FftField> EvaluationDomain<F> for MixedRadixEvaluationDomain<F> {
         debug_assert_eq!(group_gen.pow([size]), F::one());
         let size_as_field_element = F::from(size);
         let size_inv = size_as_field_element.inverse()?;
-
+        println!("contents : {}, {}, {}, {}, {}", size, log_size_of_group, size_as_field_element, size_inv, group_gen);
         Some(MixedRadixEvaluationDomain {
             size,
             log_size_of_group,

@@ -1,0 +1,44 @@
+[package]
+name = "ark-sponge"
+version = "0.3.0"
+authors = [ "arkworks contributors" ]
+description = "An implementation of the cryptographic sponge functions for zkSNARK"
+homepage = "https://arkworks.rs"
+repository = "https://github.com/arkworks-rs/sponge"
+documentation = "https://docs.rs/ark-sponge/"
+keywords = [ "zero-knowledge", "cryptography", "zkSNARK", "SNARK", "sponge" ]
+categories = [ "cryptography" ]
+include = ["Cargo.toml", "src", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+license = "MIT/Apache-2.0"
+edition = "2018"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+incremental = true
+panic = 'abort'
+
+[dependencies]
+ark-ff = { path = "../algebra/ff", version = "^0.2.0", default-features = false }
+ark-ec = { path = "../algebra/ec", version = "^0.2.0", default-features = false }
+ark-serialize = { path = "../algebra/serialize", default_features = false }
+ark-std = { path = "../utils", default-features = false }
+#ark-relations = { path ="../snark/relations", version = "^0.2.0", default-features = false }
+derivative = { version = "2.1.1", features = [ "use_core" ] }
+digest = { version = "0.9.0", default_features = false }
+rand_chacha = { version = "0.3.0", default-features = false }
+
+# Dependencies for r1cs
+ark-nonnative-field = { path = "../nonnative", optional = true, default-features = false }
+ark-r1cs-std = { path = "../r1cs-std", version = "^0.2.0", optional = true, default-features = false }
+ark-relations = { path ="../snark/relations", version = "^0.2.0", default-features = false, optional = true }
+tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
+mpc-algebra = { path = "../mpc-algebra" }
+
+[dev-dependencies]
+ark-test-curves = { version = "^0.3.0", features = ["bls12_381_curve", "mnt4_753_curve"]}
+
+[features]
+default = [ "r1cs", "std" ]
+r1cs = [ "ark-nonnative-field", "ark-relations", "ark-r1cs-std", "tracing" ]
+std = [ "ark-ec/std", "ark-ff/std", "ark-nonnative-field/std", "ark-r1cs-std/std", "ark-relations/std", "ark-std/std", "ark-serialize/std" ]

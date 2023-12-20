@@ -52,10 +52,10 @@ case $infra in
           #$BIN $i ./data/4 &
           if [ $i -eq 0 ]
           then
-            $BIN -p $proof -c squaring --computation-size $size mpc --hosts $NETWORK_CONFIG --party $i --alg $infra | rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s' &
+            $BIN -p $proof -c squaring --computation-size $size mpc --hosts $NETWORK_CONFIG --party $i --alg $infra > log$i.log & #| rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s' &
             pid=$!
           else
-            $BIN -p $proof -c squaring --computation-size $size mpc --hosts $NETWORK_CONFIG --party $i --alg $infra > /dev/null &
+            $BIN -p $proof -c squaring --computation-size $size mpc --hosts $NETWORK_CONFIG --party $i --alg $infra > log$i.log &
             pid=$!
           fi
           PROCS+=($pid)
@@ -67,7 +67,7 @@ case $infra in
         done
     ;;
     local)
-        $BIN -p $proof -c squaring --computation-size $size local | rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'
+        $BIN -p $proof -c squaring --computation-size $size local > logloc.log #| rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'
     ;;
     ark-local)
         $BIN -p $proof -c squaring --computation-size $size ark-local | rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'

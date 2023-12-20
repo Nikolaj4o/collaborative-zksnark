@@ -304,6 +304,12 @@ impl<T: PrimeField, S: FieldShare<T>> std::str::FromStr for MpcField<T, S> {
 
 impl<F: PrimeField, S: FieldShare<F>> Field for MpcField<F, S> {
     type BasePrimeField = Self;
+
+    #[inline]
+    fn characteristic<'a>() -> &'a [u64] {
+        F::characteristic()
+    }
+
     #[inline]
     fn extension_degree() -> u64 {
         unimplemented!("extension_degree")
@@ -518,14 +524,14 @@ impl<F: PrimeField, S: FieldShare<F>> PrimeField for MpcField<F, S> {
     type BigInt = F::BigInt;
     #[inline]
     fn from_repr(_r: <Self as PrimeField>::BigInt) -> Option<Self> {
-        unimplemented!("No BigInt reprs for shared fields! (from_repr)")
-        //F::from_repr(r).map(|v| Self::from_public(v))
+        //unimplemented!("No BigInt reprs for shared fields! (from_repr)")
+        F::from_repr(_r).map(|v| Self::from_public(v))
     }
     // We're assuming that into_repr is linear
     #[inline]
     fn into_repr(&self) -> <Self as PrimeField>::BigInt {
-        unimplemented!("No BigInt reprs for shared fields! (into_repr)")
-        //self.unwrap_as_public().into_repr()
+        //unimplemented!("No BigInt reprs for shared fields! (into_repr)")
+        self.unwrap_as_public().into_repr()
     }
 }
 

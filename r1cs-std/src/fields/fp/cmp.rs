@@ -104,10 +104,12 @@ impl<F: PrimeField> FpVar<F> {
     ) -> Result<(), SynthesisError> {
         // It's okay to use `to_non_unique_bits` bits here because we're enforcing
         // self <= (p-1)/2, which implies self < p.
+        
         let _ = Boolean::enforce_smaller_or_equal_than_le(
             &self.to_non_unique_bits_le()?,
             F::modulus_minus_one_div_two(),
         )?;
+
         Ok(())
     }
 
@@ -134,6 +136,7 @@ impl<F: PrimeField> FpVar<F> {
     /// Helper function to enforce `self < other`. This function verifies `self`
     /// and `other` are `<= (p-1)/2`.
     fn enforce_smaller_than(&self, other: &FpVar<F>) -> Result<(), SynthesisError> {
+        
         self.enforce_smaller_or_equal_than_mod_minus_one_div_two()?;
         other.enforce_smaller_or_equal_than_mod_minus_one_div_two()?;
         self.enforce_smaller_than_unchecked(other)

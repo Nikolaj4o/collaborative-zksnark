@@ -13,11 +13,11 @@ license = "MIT/Apache-2.0"
 edition = "2018"
 
 [dependencies]
-ark-ff = { version = "^0.2.0", default-features = false }
-ark-ec = { version = "^0.2.0", default-features = false }
-ark-std = { path = "../util",  path = "../util", default-features = false }
-ark-r1cs-std = { version = "^0.2.0", default-features = false, optional = true }
-ark-bn254 = { version = "^0.2.0", path = "../bn254", default-features = false, features = [ "scalar_field" ] }
+ark-ff = { path = "../../algebra/ff", default-features = false }
+ark-ec = { path = "../../algebra/ec", default-features = false }
+ark-std = { path = "../../utils", default-features = false }
+ark-r1cs-std = { path = "../../r1cs-std", default-features = false, optional = true }
+ark-bn254 = { path = "../bn254", default-features = false, features = [ "scalar_field" ] }
 
 [dev-dependencies]
 ark-relations = { version = "^0.2.0", default-features = false }
