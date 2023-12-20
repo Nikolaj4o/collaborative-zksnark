@@ -788,7 +788,7 @@ mod shallownet_mnist {
                         l2_mat_multiplier,
                         true
                     ),
-                    1 => gen_circ_full_poseidon::<Bls12<ark_bls12_377::Parameters>>(
+                    1_u8..=u8::MAX => gen_circ_full_poseidon::<Bls12<ark_bls12_377::Parameters>>(
                         x.clone(),
                         l1_mat,
                         l2_mat, 
