@@ -1,4 +1,4 @@
-use ark_crypto_primitives::commitment::pedersen;
+/*use ark_crypto_primitives::commitment::pedersen;
 use ark_crypto_primitives::commitment::pedersen::Commitment;
 use ark_crypto_primitives::commitment::pedersen::Randomness;
 use ark_crypto_primitives::CommitmentScheme;
@@ -9,7 +9,7 @@ use std::cmp::*;
 //=======================
 // curves: JubJub and BLS
 //=======================
-pub type JubJub = ark_ed_on_bls12_377::EdwardsProjective;
+pub type JubJub = ark_ed_on_bls12_381::EdwardsProjective;
 
 //=======================
 // pedersen hash and related defintions
@@ -65,4 +65,4 @@ pub fn pedersen_commit_long_vector(
         commit_res.push(PedersenComScheme::commit(param, &tmp, r).unwrap());
     }
     commit_res
-}
+}*/

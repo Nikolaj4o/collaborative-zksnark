@@ -1,42 +1,20 @@
 use crate::argmax_circuit::*;
 use crate::fc_circuit::*;
-use crate::kzgcom_circuit::*;
-use crate::poly_circuit::PolyCircuit;
-use crate::poseidon_circuit::PosedionCircuit;
-use crate::poseidon_circuit::PosedionCircuitU8;
-use crate::psponge::SPNGCircuit;
-use crate::psponge::SPNGOutput;
-use crate::psponge::SPNGParam;
 use crate::relu_circuit::*;
 use crate::vanilla::*;
 use crate::*;
-use ark_ec::PairingEngine;
-use ark_ec::ProjectiveCurve;
-use ark_ec::bls12::Bls12;
-use ark_ec::bls12::G1Prepared;
-use ark_ec::bls12::G2Prepared;
-use ark_ec::bw6::BW6;
-use ark_ec::short_weierstrass_jacobian::GroupAffine;
-use ark_r1cs_std::R1CSVar;
-use ark_r1cs_std::ToConstraintFieldGadget;
 use ark_r1cs_std::alloc::AllocVar;
-use ark_r1cs_std::eq::EqGadget;
 use ark_r1cs_std::fields::fp::FpVar;
-use ark_r1cs_std::groups::bls12::G1PreparedVar;
-use ark_r1cs_std::groups::bls12::G2PreparedVar;
+use ark_r1cs_std::fields::FieldVar;
+use ark_r1cs_std::eq::EqGadget;
 use ark_r1cs_std::poly::polynomial::univariate::dense::DensePolynomialVar;
-use ark_sponge::CryptographicSponge;
-use ark_sponge::constraints::CryptographicSpongeVar;
-use ark_sponge::poseidon::PoseidonSponge;
-use ark_sponge::poseidon::constraints::PoseidonSpongeVar;
-use mpc_algebra::AffProjShare;
-use mpc_algebra::com;
 use std::cmp::*;
 use ark_ff::*;
-use ark_std::test_rng;
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_ed_on_bls12_381::{constraints::FqVar, Fq};
-use mpc_algebra::{channel, MpcPairingEngine, PairingShare, Reveal};
+use ark_std::start_timer;
+use ark_std::end_timer;
+//use ark_sponge::poseidon::PoseidonParameters;
 
 
 
@@ -48,11 +26,11 @@ pub fn convert_2d_vector_into_1d<T: Clone>(vec: Vec<Vec<T>>) -> Vec<T> {
     res
 }
 
-pub fn convert_2d_vector_into_fq(vec: Vec<Vec<u8>>) -> Vec<Fq> {
-    let mut res = vec![Fq::zero(); vec[0].len() * vec.len()];
+pub fn convert_2d_vector_into_fq<F: PrimeField>(vec: Vec<Vec<u8>>) -> Vec<F> {
+    let mut res = vec![F::zero(); vec[0].len() * vec.len()];
     for i in 0..vec.len() {
         for j in 0..vec[0].len() {
-            let tmp: Fq = vec[i][j].into();
+            let tmp: F = vec[i][j].into();
             res[i * vec[0].len() + j] = tmp;
         }
     }
@@ -69,19 +47,6 @@ fn generate_fqvar<F: PrimeField>(cs: ConstraintSystemRef<F>, input: Vec<u8>) -> 
     res
 }
 
-fn generate_fqvar_share<F: PrimeField, MFr: PrimeField + Reveal<Base = F>>(cs: ConstraintSystemRef<MFr>, input: Vec<u8>) -> Vec<FpVar<MFr>> {
-    let mut res: Vec<FpVar<MFr>> = Vec::new();
-    for i in 0..input.len() {
-        let fq: F = input[i].into();
-        let rng = &mut test_rng();
-        let fq_share = MFr::king_share(fq, rng);
-        let tmp = FpVar::<MFr>::new_witness(ark_relations::ns!(cs, "tmp"), || Ok(fq_share)).unwrap();
-        res.push(tmp);
-    }
-    println!("FQVAR IPT LEN: {}", res.len());
-    res
-}
-
 fn generate_fqvar_ipt<F: PrimeField>(cs: ConstraintSystemRef<F>, input: Vec<u8>) -> Vec<FpVar<F>> {
     let mut res: Vec<FpVar<F>> = Vec::new();
     for i in 0..input.len() {
@@ -89,25 +54,8 @@ fn generate_fqvar_ipt<F: PrimeField>(cs: ConstraintSystemRef<F>, input: Vec<u8>)
         let tmp = FpVar::<F>::new_input(ark_relations::ns!(cs, "tmp"), || Ok(fq)).unwrap();
         res.push(tmp);
     }
-    println!("FQVAR IPT LEN: {}", res.len());
     res
 }
-
-fn generate_fqvar_ipt_share<F: PrimeField, MFr: PrimeField + Reveal<Base = F>>(cs: ConstraintSystemRef<MFr>, input: Vec<u8>) -> Vec<FpVar<MFr>> {
-    let mut res: Vec<FpVar<MFr>> = Vec::new();
-    let fq_vec: Vec<F> = input.iter().map(|f| (*f).into()).collect();
-    let rng = &mut test_rng();
-    println!("LENGTH:{}", fq_vec.len());
-    let fq_share = MFr::king_share_batch(fq_vec, rng);
-
-    for i in 0..input.len() {
-        let tmp = FpVar::<MFr>::new_input(ark_relations::ns!(cs, "tmp"), || Ok(fq_share[i])).unwrap();
-        res.push(tmp);
-    }
-    println!("FQVAR IPT LEN: {}", res.len());
-    res
-}
-
 fn generate_fqvar_witness2D<F: PrimeField>(cs: ConstraintSystemRef<F>, input: Vec<Vec<u8>>) -> Vec<Vec<FpVar<F>>> {
     let zero_var = FpVar::<F>::Constant(F::zero());
     let mut res: Vec<Vec<FpVar<F>>> = vec![vec![zero_var; input[0].len()]; input.len()];
@@ -121,141 +69,61 @@ fn generate_fqvar_witness2D<F: PrimeField>(cs: ConstraintSystemRef<F>, input: Ve
     res
 }
 
-fn generate_fqvar_witness2D_share<F: PrimeField, MFr: PrimeField + Reveal<Base = F>>(cs: ConstraintSystemRef<MFr>, input: Vec<Vec<u8>>) -> Vec<Vec<FpVar<MFr>>> {
+/*#[derive(Clone)]
+pub struct FullCircuitOpLv3PedersenClassification {
+    pub x: Vec<u8>,
+    pub x_open: PedersenRandomness,
+    pub x_com: PedersenCommitment,
+    pub params: PedersenParam,
+    pub l1: Vec<Vec<u8>>,
+    pub l1_open: PedersenRandomness,
+    pub l1_com_vec: Vec<PedersenCommitment>,
+    pub l2: Vec<Vec<u8>>,
+    pub l2_open: PedersenRandomness,
+    pub l2_com_vec: Vec<PedersenCommitment>,
+    pub z: Vec<u8>,
+    pub z_open: PedersenRandomness,
+    pub z_com: PedersenCommitment,
+    pub argmax_res: usize,
 
-    let zero_var = FpVar::<MFr>::Constant(MFr::zero());
-    let mut res: Vec<Vec<FpVar<MFr>>> = vec![vec![zero_var; input[0].len()]; input.len()];
-    for i in 0..input.len() {
-        for j in 0..input[i].len() {
-            let fq: F = input[i][j].into();
-            let rng = &mut test_rng();
-            let fq_share = MFr::king_share(fq, rng);        
-            let tmp = FpVar::<MFr>::new_witness(ark_relations::ns!(cs, "tmp"), || Ok(fq_share)).unwrap();
-            res[i][j] = tmp;
-        }
-    }
-    res
-}
-fn generate_fvar_ipt<F: PrimeField>(cs: ConstraintSystemRef<F>, input: Vec<F>) -> Vec<FpVar<F>> {
-    let res = input.iter().map(|x| FpVar::<F>::new_input(ark_relations::ns!(cs, "tmp"), || Ok(*x)).unwrap()).collect(); 
-    res
-}
-fn generate_fvar<F: PrimeField>(cs: ConstraintSystemRef<F>, input: Vec<F>) -> Vec<FpVar<F>> {
-    let res = input.iter().map(|x| FpVar::<F>::new_witness(ark_relations::ns!(cs, "tmp"), || Ok(*x)).unwrap()).collect(); 
-    res
-}
-
-fn generate_fvar2d<F: PrimeField>(cs: ConstraintSystemRef<F>, input: Vec<Vec<F>>) -> Vec<Vec<FpVar<F>>> {
-    let res = input.iter().map(|x| generate_fvar(cs.clone(), (*x).clone())).collect();
-    res
-}
-#[derive(Clone)]
-pub struct FullCircuitOpLv3PoseidonClassificationU8<F: PrimeField> {
-    pub x: Vec<F>,
-    pub l1: Vec<Vec<F>>,
-    pub l2: Vec<Vec<F>>,
-    pub y: Vec<F>,
-    pub z: Vec<F>,
-    pub x_u8: Vec<u8>,
-    pub l1_u8: Vec<Vec<u8>>,
-    pub l2_u8: Vec<Vec<u8>>,
-    pub z_u8: Vec<u8>,
-    pub argmax_res: F,
-    pub relu_output1: Vec<F>,
-    pub remainder1: Vec<F>,
-    pub remainder2: Vec<F>,
-    pub div1: Vec<F>,
-    pub div2: Vec<F>,
-    pub cmp_res: Vec<bool>,
-    pub y_0_converted: Vec<F>,
-    pub z_0_converted: Vec<F>,
-    pub x_0: F,
-    pub y_0: F,
-    pub z_0: F,
-    pub l1_mat_0: F,
-    pub l2_mat_0: F,
-    pub multiplier_l1: Vec<F>,
-    pub multiplier_l2: Vec<F>,
-    pub two_power_8: F,
-    pub m_exp: F,
-    pub zero: F,
-
-    pub params: <PoseidonSponge<F> as CryptographicSponge>::Parameters,
-    pub x_squeeze: Vec<F>,
-    pub l1_squeeze: Vec<F>,
-    pub l2_squeeze: Vec<F>,
-    pub z_squeeze: Vec<F>,
+    pub x_0: u8,
+    pub y_0: u8,
+    pub z_0: u8,
+    pub l1_mat_0: u8,
+    pub l2_mat_0: u8,
+    pub multiplier_l1: Vec<f32>,
+    pub multiplier_l2: Vec<f32>,
 }
 
-impl <F: PrimeField>ConstraintSynthesizer<F> for FullCircuitOpLv3PoseidonClassificationU8<F>{
-    fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
-        let x_fvar = generate_fvar_ipt(cs.clone(), self.x.clone());
-        let l1_fvar = generate_fvar2d(cs.clone(), self.l1.clone());
-        let l2_fvar = generate_fvar2d(cs.clone(), self.l2.clone());
-        let y_fvar = generate_fvar(cs.clone(), self.y.clone());
-        let l1_1d_fvar = convert_2d_vector_into_1d(l1_fvar.clone());
-        let l2_1d_fvar = convert_2d_vector_into_1d(l2_fvar.clone());
+impl ConstraintSynthesizer<Fq> for FullCircuitOpLv3PedersenClassification {
+    fn generate_constraints(self, cs: ConstraintSystemRef<Fq>) -> Result<(), SynthesisError> {
+        let full_circuit = FullCircuitOpLv3Pedersen {
+            params: self.params.clone(),
+            x: self.x.clone(),
+            x_com: self.x_com.clone(),
+            x_open: self.x_open,
+            l1: self.l1,
+            l1_open: self.l1_open,
+            l1_com_vec: self.l1_com_vec,
+            l2: self.l2,
+            l2_open: self.l2_open,
+            l2_com_vec: self.l2_com_vec,
+            z: self.z.clone(),
+            z_com: self.z_com.clone(),
+            z_open: self.z_open,
 
-        //let l1_1d_fvar = generate_fvar(cs.clone(), self.l1_1d_f.clone());
-        //let l2_1d_fvar = generate_fvar(cs.clone(), self.l2_1d_f.clone());
-        let z_fvar = generate_fvar_ipt(cs.clone(), self.z.clone());
-        let relu_output1_fvar = generate_fvar(cs.clone(), self.relu_output1.clone());
-        let argmax_fvar = FpVar::<F>::new_witness(ark_relations::ns!(cs, "argmax var"), || Ok(self.argmax_res)).unwrap();
-        //let param_var = PoseidonSpongeVar::<F>::new(cs.clone(),&self.params);
-        
-        let full_circuit = FullCircuitOpLv3 {
-            x: x_fvar.clone(),
-            l1: l1_fvar,
-            l2: l2_fvar,
-            z: z_fvar.clone(),
-            y: y_fvar,
-            relu_output1: relu_output1_fvar,
-            remainder1: self.remainder1,
-            remainder2: self.remainder2,
-            div1: self.div1,
-            div2: self.div2,
-            cmp_res: self.cmp_res,
-            y_0_converted: self.y_0_converted,
-            z_0_converted: self.z_0_converted,
             x_0: self.x_0,
             y_0: self.y_0,
             z_0: self.z_0,
             l1_mat_0: self.l1_mat_0,
             l2_mat_0: self.l2_mat_0,
-            multiplier_l1: self.multiplier_l1,
-            multiplier_l2: self.multiplier_l2,
-            two_power_8: self.two_power_8,
-            m_exp: self.m_exp,
-            zero: self.zero,
+            multiplier_l1: self.multiplier_l1.clone(),
+            multiplier_l2: self.multiplier_l2.clone(),
         };
 
         let argmax_circuit = ArgmaxCircuitU8 {
-            input: z_fvar.clone(),
-            argmax_res: argmax_fvar,
-        };
-
-        let x_com_circuit = PosedionCircuit {
-            param: self.params.clone(),
-            input: x_fvar.clone(),
-            output: self.x_squeeze.clone()
-        };
-
-        let l1_com_circuit = PosedionCircuit {
-            param: self.params.clone(),
-            input: l1_1d_fvar,
-            output: self.l1_squeeze.clone()
-        };
-
-        let l2_com_circuit = PosedionCircuit {
-            param: self.params.clone(),
-            input: l2_1d_fvar,
-            output: self.l2_squeeze.clone()
-        };
-
-        let z_com_circuit = PosedionCircuit {
-            param: self.params.clone(),
-            input: z_fvar,
-            output: self.z_squeeze.clone()
+            input: self.z.clone(),
+            argmax_res: self.argmax_res.clone(),
         };
 
         full_circuit
@@ -266,533 +134,149 @@ impl <F: PrimeField>ConstraintSynthesizer<F> for FullCircuitOpLv3PoseidonClassif
             .clone()
             .generate_constraints(cs.clone())
             .unwrap();
-        x_com_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        l1_com_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        l2_com_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        z_com_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
+        println!("Full {}", cs.num_constraints());
         Ok(())
     }
 }
 
 #[derive(Clone)]
-pub struct FullCircuitOpLv3PoseidonClassification<F: PrimeField> {
-    pub x: Vec<F>,
-    pub l1: Vec<Vec<F>>,
-    pub l2: Vec<Vec<F>>,
-    pub y: Vec<F>,
-    pub z: Vec<F>,
-    pub argmax_res: F,
-    pub relu_output1: Vec<F>,
-    pub remainder1: Vec<F>,
-    pub remainder2: Vec<F>,
-    pub div1: Vec<F>,
-    pub div2: Vec<F>,
-    pub cmp_res: Vec<bool>,
-    pub y_0_converted: Vec<F>,
-    pub z_0_converted: Vec<F>,
-    pub x_0: F,
-    pub y_0: F,
-    pub z_0: F,
-    pub l1_mat_0: F,
-    pub l2_mat_0: F,
-    pub multiplier_l1: Vec<F>,
-    pub multiplier_l2: Vec<F>,
-    pub two_power_8: F,
-    pub m_exp: F,
-    pub zero: F,
+pub struct FullCircuitOpLv3Pedersen {
+    pub x: Vec<u8>,
+    pub x_open: PedersenRandomness,
+    pub x_com: PedersenCommitment,
+    pub params: PedersenParam,
+    pub l1: Vec<Vec<u8>>,
+    pub l1_open: PedersenRandomness,
+    pub l1_com_vec: Vec<PedersenCommitment>,
+    pub l2: Vec<Vec<u8>>,
+    pub l2_open: PedersenRandomness,
+    pub l2_com_vec: Vec<PedersenCommitment>,
+    pub z: Vec<u8>,
+    pub z_open: PedersenRandomness,
+    pub z_com: PedersenCommitment,
 
-    pub params: <PoseidonSponge<F> as CryptographicSponge>::Parameters,
-    pub commit: Vec<F>,
-    pub commit_u8: Vec<u8>,
-    pub is_u8: bool,
+    pub x_0: u8,
+    pub y_0: u8,
+    pub z_0: u8,
+    pub l1_mat_0: u8,
+    pub l2_mat_0: u8,
+    pub multiplier_l1: Vec<f32>,
+    pub multiplier_l2: Vec<f32>,
 }
 
-impl <F: PrimeField>ConstraintSynthesizer<F> for FullCircuitOpLv3PoseidonClassification<F>{
-    fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
-        let x_fvar = generate_fvar_ipt(cs.clone(), self.x.clone());
-        let l1_fvar = generate_fvar2d(cs.clone(), self.l1.clone());
-        let l2_fvar = generate_fvar2d(cs.clone(), self.l2.clone());
-        let y_fvar = generate_fvar(cs.clone(), self.y.clone());
-        let l1_1d_fvar = convert_2d_vector_into_1d(l1_fvar.clone());
-        let l2_1d_fvar = convert_2d_vector_into_1d(l2_fvar.clone());
-        //let l1_1d_fvar = generate_fvar(cs.clone(), self.l1_1d_f.clone());
-        //let l2_1d_fvar = generate_fvar(cs.clone(), self.l2_1d_f.clone());
-        let z_fvar = generate_fvar_ipt(cs.clone(), self.z.clone());
-        let mut commit_ipt_fvar = Vec::<FpVar<F>>::new();
-        commit_ipt_fvar.extend(x_fvar.clone());
-        commit_ipt_fvar.extend(l1_1d_fvar);
-        commit_ipt_fvar.extend(l2_1d_fvar);
-        commit_ipt_fvar.extend(z_fvar.clone());
-        let relu_output1_fvar = generate_fvar(cs.clone(), self.relu_output1.clone());
-        let argmax_fvar = FpVar::<F>::new_witness(ark_relations::ns!(cs, "argmax var"), || Ok(self.argmax_res)).unwrap();
-        //let param_var = PoseidonSpongeVar::<F>::new(cs.clone(),&self.params);
-        
-        let full_circuit = FullCircuitOpLv3 {
-            x: x_fvar,
-            l1: l1_fvar,
-            l2: l2_fvar,
-            z: z_fvar.clone(),
-            y: y_fvar,
-            relu_output1: relu_output1_fvar,
-            remainder1: self.remainder1,
-            remainder2: self.remainder2,
-            div1: self.div1,
-            div2: self.div2,
-            cmp_res: self.cmp_res,
-            y_0_converted: self.y_0_converted,
-            z_0_converted: self.z_0_converted,
-            x_0: self.x_0,
-            y_0: self.y_0,
-            z_0: self.z_0,
-            l1_mat_0: self.l1_mat_0,
-            l2_mat_0: self.l2_mat_0,
-            multiplier_l1: self.multiplier_l1,
-            multiplier_l2: self.multiplier_l2,
-            two_power_8: self.two_power_8,
-            m_exp: self.m_exp,
-            zero: self.zero,
+impl ConstraintSynthesizer<Fq> for FullCircuitOpLv3Pedersen {
+    fn generate_constraints(self, cs: ConstraintSystemRef<Fq>) -> Result<(), SynthesisError> {
+        //x commitment
+        let x_com_circuit = PedersenComCircuit {
+            param: self.params.clone(),
+            input: self.x.clone(),
+            open: self.x_open,
+            commit: self.x_com,
         };
+        x_com_circuit.generate_constraints(cs.clone())?;
+        let mut _cir_number = cs.num_constraints();
+        // #[cfg(debug_assertion)]
+        println!("Number of constraints for x commitment {}", _cir_number);
 
-        let argmax_circuit = ArgmaxCircuitU8 {
-            input: z_fvar.clone(),
-            argmax_res: argmax_fvar,
+        // z commitment
+        let z_com_circuit = PedersenComCircuit {
+            param: self.params.clone(),
+            input: self.z.clone(),
+            open: self.z_open,
+            commit: self.z_com,
         };
-
-        let com_circuit = PosedionCircuit {
-                param: self.params.clone(),
-                input: commit_ipt_fvar.clone(),
-                output: self.commit.clone()
-        };
-        let com_circuit_u8 = PosedionCircuitU8 {
-                param: self.params.clone(),
-                input: self.commit_u8,
-                output: self.commit.clone()
-        };
-    
-
-
-        // let l1_com_circuit = PosedionCircuit {
-        //     param: self.params.clone(),
-        //     input: l1_1d_fvar,
-        //     output: self.l1_squeeze.clone()
-        // };
-
-        // let l2_com_circuit = PosedionCircuit {
-        //     param: self.params.clone(),
-        //     input: l2_1d_fvar,
-        //     output: self.l2_squeeze.clone()
-        // };
-
-        // let z_com_circuit = PosedionCircuit {
-        //     param: self.params.clone(),
-        //     input: z_fvar,
-        //     output: self.z_squeeze.clone()
-        // };
-
-        full_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        argmax_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        if self.is_u8 {
-            com_circuit_u8
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        } else {
-            com_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        }
-
-        // l1_com_circuit
-        //     .clone()
-        //     .generate_constraints(cs.clone())
-        //     .unwrap();
-        // l2_com_circuit
-        //     .clone()
-        //     .generate_constraints(cs.clone())
-        //     .unwrap();
-        // z_com_circuit
-        //     .clone()
-        //     .generate_constraints(cs.clone())
-        //     .unwrap();
-        Ok(())
-    }
-}
-
-type BwSF = <BW6<ark_bw6_761::Parameters> as PairingEngine>::Fr;
-#[derive(Clone)]
-pub struct FullCircuitOpLv3KZGPolyClassification<F: PrimeField> {
-    pub x: Vec<F>,
-    pub l1: Vec<Vec<F>>,
-    pub l2: Vec<Vec<F>>,
-    pub y: Vec<F>,
-    pub z: Vec<F>,
-    pub argmax_res: F,
-    pub relu_output1: Vec<F>,
-    pub remainder1: Vec<F>,
-    pub remainder2: Vec<F>,
-    pub div1: Vec<F>,
-    pub div2: Vec<F>,
-    pub cmp_res: Vec<bool>,
-    pub y_0_converted: Vec<F>,
-    pub z_0_converted: Vec<F>,
-    pub x_0: F,
-    pub y_0: F,
-    pub z_0: F,
-    pub l1_mat_0: F,
-    pub l2_mat_0: F,
-    pub multiplier_l1: Vec<F>,
-    pub multiplier_l2: Vec<F>,
-    pub two_power_8: F,
-    pub m_exp: F,
-    pub zero: F,
-
-    pub powers_of_beta: Vec<F>,
-    pub rho: F,
-}
-
-impl <F: PrimeField> ConstraintSynthesizer<F> for FullCircuitOpLv3KZGPolyClassification<F>{
-    fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
-        let x_fvar = generate_fvar_ipt(cs.clone(), self.x.clone());
-        let l1_fvar = generate_fvar2d(cs.clone(), self.l1.clone());
-        let l2_fvar = generate_fvar2d(cs.clone(), self.l2.clone());
-        let y_fvar = generate_fvar(cs.clone(), self.y.clone());
-        let l1_1d_fvar = convert_2d_vector_into_1d(l1_fvar.clone());
-        let l2_1d_fvar = convert_2d_vector_into_1d(l2_fvar.clone());
-
-        //let l1_1d_fvar = generate_fvar(cs.clone(), self.l1_1d_f.clone());
-        //let l2_1d_fvar = generate_fvar(cs.clone(), self.l2_1d_f.clone());
-        let z_fvar = generate_fvar_ipt(cs.clone(), self.z.clone());
-        let mut commit_ipt_fvar = Vec::<FpVar<F>>::new();
-        commit_ipt_fvar.extend(x_fvar.clone());
-        commit_ipt_fvar.extend(l1_1d_fvar);
-        commit_ipt_fvar.extend(l2_1d_fvar);
-        commit_ipt_fvar.extend(z_fvar.clone());
-        let relu_output1_fvar = generate_fvar(cs.clone(), self.relu_output1.clone());
-        let argmax_fvar = FpVar::<F>::new_witness(ark_relations::ns!(cs, "argmax var"), || Ok(self.argmax_res)).unwrap();
-        // KZG stuff 
-        // Ensure rho = Bls_SF(sum(w_i * beta^i))
-
-        let _cir_number = cs.num_constraints();
-        let com_len = commit_ipt_fvar.len();
-        let beta_fvar = FpVar::<F>::new_input(ark_relations::ns!(cs, "beta var"), || Ok(self.powers_of_beta[0])).unwrap();
-        let poly = DensePolynomialVar::<F>::from_coefficients_vec(commit_ipt_fvar);
-        let rho_fvar = FpVar::<F>::new_input(ark_relations::ns!(cs, "rho var"), || Ok(self.rho)).unwrap();
-        let rho_circ = poly.evaluate(&beta_fvar).unwrap();
-        rho_circ.enforce_equal(&rho_fvar).unwrap();
+        z_com_circuit.generate_constraints(cs.clone())?;
+        // #[cfg(debug_assertion)]
         println!(
-            "Number of constraints for Poly {}, avg {}",
+            "Number of constraints for z commitment {} accumulated constraints {}",
             cs.num_constraints() - _cir_number,
-            ((cs.num_constraints() - _cir_number) as f64) / (com_len as f64)
+            cs.num_constraints()
+        );
+        _cir_number = cs.num_constraints();
+        let len_per_commit = PERDERSON_WINDOW_NUM * PERDERSON_WINDOW_SIZE / 8; //for vec<u8> commitment
+
+        let l1_mat_1d = convert_2d_vector_into_1d(self.l1.clone());
+        let num_of_commit_l1 = l1_mat_1d.len() / len_per_commit + 1;
+        for i in 0..num_of_commit_l1 {
+            let mut tmp = Vec::new();
+            for j in i * len_per_commit..min((i + 1) * len_per_commit, l1_mat_1d.len()) {
+                tmp.push(l1_mat_1d[j]);
+            }
+            let l1_com_circuit = PedersenComCircuit {
+                param: self.params.clone(),
+                input: tmp.clone(),
+                open: self.l1_open.clone(),
+                commit: self.l1_com_vec[i],
+            };
+            l1_com_circuit.generate_constraints(cs.clone())?;
+        }
+        println!(
+            "Number of constraints for l1 layer commitment {} accumulated constraints {}",
+            cs.num_constraints() - _cir_number,
+            cs.num_constraints()
+        );
+        _cir_number = cs.num_constraints();
+
+        let l2_mat_1d = convert_2d_vector_into_1d(self.l2.clone());
+        let num_of_commit_l2 = l2_mat_1d.len() / len_per_commit + 1;
+        for i in 0..num_of_commit_l2 {
+            let mut tmp = Vec::new();
+            for j in i * len_per_commit..min((i + 1) * len_per_commit, l2_mat_1d.len()) {
+                tmp.push(l2_mat_1d[j]);
+            }
+            let l2_com_circuit = PedersenComCircuit {
+                param: self.params.clone(),
+                input: tmp.clone(),
+                open: self.l2_open.clone(),
+                commit: self.l2_com_vec[i],
+            };
+            l2_com_circuit.generate_constraints(cs.clone())?;
+        }
+
+        println!(
+            "Number of constraints for l2 layer commitment {} accumulated constraints {}",
+            cs.num_constraints() - _cir_number,
+            cs.num_constraints()
         );
 
-        let full_circuit = FullCircuitOpLv3 {
-            x: x_fvar,
-            l1: l1_fvar,
-            l2: l2_fvar,
-            z: z_fvar.clone(),
-            y: y_fvar,
-            relu_output1: relu_output1_fvar,
-            remainder1: self.remainder1,
-            remainder2: self.remainder2,
-            div1: self.div1,
-            div2: self.div2,
-            cmp_res: self.cmp_res,
-            y_0_converted: self.y_0_converted,
-            z_0_converted: self.z_0_converted,
-            x_0: self.x_0,
-            y_0: self.y_0,
-            z_0: self.z_0,
-            l1_mat_0: self.l1_mat_0,
-            l2_mat_0: self.l2_mat_0,
-            multiplier_l1: self.multiplier_l1,
-            multiplier_l2: self.multiplier_l2,
-            two_power_8: self.two_power_8,
-            m_exp: self.m_exp,
-            zero: self.zero,
-        };
-        let argmax_circuit = ArgmaxCircuitU8 {
-            input: z_fvar,
-            argmax_res: argmax_fvar,
-        };
-        full_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        argmax_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        Ok(())
-    }
-}
-#[derive(Clone)]
-pub struct FullCircuitOpLv3KZGClassification<F: PrimeField> {
-    pub x: Vec<F>,
-    pub l1: Vec<Vec<F>>,
-    pub l2: Vec<Vec<F>>,
-    pub y: Vec<F>,
-    pub z: Vec<F>,
-    pub argmax_res: F,
-    pub relu_output1: Vec<F>,
-    pub remainder1: Vec<F>,
-    pub remainder2: Vec<F>,
-    pub div1: Vec<F>,
-    pub div2: Vec<F>,
-    pub cmp_res: Vec<bool>,
-    pub y_0_converted: Vec<F>,
-    pub z_0_converted: Vec<F>,
-    pub x_0: F,
-    pub y_0: F,
-    pub z_0: F,
-    pub l1_mat_0: F,
-    pub l2_mat_0: F,
-    pub multiplier_l1: Vec<F>,
-    pub multiplier_l2: Vec<F>,
-    pub two_power_8: F,
-    pub m_exp: F,
-    pub zero: F,
+        // layer 1
+        let mut y = vec![0u8; self.l1.len()];
+        let l1_mat_ref: Vec<&[u8]> = self.l1.iter().map(|x| x.as_ref()).collect();
+        let x_fqvar = generate_fqvar(cs.clone(), self.x.clone());
 
-    pub powers_of_beta: Vec<F>,
-    pub bls_modulus: BwSF,
-    pub l1_rho: F,
-    pub l2_rho: F,
-    pub l1_beta_qr: Vec<(BwSF, BwSF)>,
-    pub l2_beta_qr: Vec<(BwSF, BwSF)>,
-    pub l1_cum_sum_qr: Vec<(BwSF, BwSF)>,
-    pub l2_cum_sum_qr: Vec<(BwSF, BwSF)>,
+        let (remainder1, div1) = vec_mat_mul_with_remainder_u8(
+            &self.x,
+            l1_mat_ref[..].as_ref(),
+            &mut y,
+            self.x_0,
+            self.l1_mat_0,
+            self.y_0,
+            &self.multiplier_l1,
+        );
 
-    pub g1_l1_l: G1Prepared<ark_bls12_377::Parameters>,
-    pub g1_l2_l: G1Prepared<ark_bls12_377::Parameters>,
-    pub g1_l1_r: G1Prepared<ark_bls12_377::Parameters>,
-    pub g1_l2_r: G1Prepared<ark_bls12_377::Parameters>, 
-    pub g2_l: G2Prepared<ark_bls12_377::Parameters>,
-    pub g2_r: G2Prepared<ark_bls12_377::Parameters>,
-}
-impl ConstraintSynthesizer<BwSF> for FullCircuitOpLv3KZGClassification<BwSF>{
-    fn generate_constraints(self, cs: ConstraintSystemRef<BwSF>) -> Result<(), SynthesisError> {
+        let mut y_out = y.clone();
+        let cmp_res = relu_u8(&mut y_out, self.y_0);
 
-        let x_fvar = generate_fvar_ipt(cs.clone(), self.x.clone());
-        let l1_fvar = generate_fvar2d(cs.clone(), self.l1.clone());
-        let l2_fvar = generate_fvar2d(cs.clone(), self.l2.clone());
-        let y_fvar = generate_fvar(cs.clone(), self.y.clone());
-        let l1_1d_fvar = convert_2d_vector_into_1d(l1_fvar.clone());
-        let l2_1d_fvar = convert_2d_vector_into_1d(l2_fvar.clone());
-
-        //let l1_1d_fvar = generate_fvar(cs.clone(), self.l1_1d_f.clone());
-        //let l2_1d_fvar = generate_fvar(cs.clone(), self.l2_1d_f.clone());
-        let z_fvar = generate_fvar_ipt(cs.clone(), self.z.clone());
-        let relu_output1_fvar = generate_fvar(cs.clone(), self.relu_output1.clone());
-        let argmax_fvar = FpVar::<BwSF>::new_witness(ark_relations::ns!(cs, "argmax var"), || Ok(self.argmax_res)).unwrap();
-        // KZG stuff 
-        // Ensure rho = Bls_SF(sum(w_i * beta^i))
-        let beta_fvar = generate_fvar(cs.clone(), self.powers_of_beta.clone());
-        let l1_beta_fvar: Vec<FpVar<BwSF>> = l1_1d_fvar.iter().zip(beta_fvar.iter())
-            .map(|(a,b)| a * b).collect();
-
-        let l2_beta_fvar: Vec<FpVar<BwSF>> = l2_1d_fvar.iter().zip(beta_fvar.iter())
-            .map(|(a,b)| a * b).collect();
-
-        let l1_beta_qr_fvar: Vec<(FpVar<BwSF>, FpVar<BwSF>)> = self.l1_beta_qr.iter()
-            .map(|(a,b)| (
-                FpVar::<BwSF>::new_witness(ark_relations::ns!(cs, "l1_q"), || Ok(*a)).unwrap(),
-                FpVar::<BwSF>::new_witness(ark_relations::ns!(cs, "l1_r"), || Ok(*b)).unwrap(),
-            )).collect();
-
-        let l2_beta_qr_fvar: Vec<(FpVar<BwSF>, FpVar<BwSF>)> = self.l2_beta_qr.iter()
-            .map(|(a,b)| (
-                FpVar::<BwSF>::new_witness(ark_relations::ns!(cs, "l2_q"), || Ok(*a)).unwrap(),
-                FpVar::<BwSF>::new_witness(ark_relations::ns!(cs, "l2_r"), || Ok(*b)).unwrap(),
-            )).collect();
-        
-        let l1_cum_sum_qr_fvar: Vec<(FpVar<BwSF>, FpVar<BwSF>)> = self.l1_cum_sum_qr.iter()
-            .map(|(a,b)| (
-                FpVar::<BwSF>::new_witness(ark_relations::ns!(cs, "l1_q"), || Ok(*a)).unwrap(),
-                FpVar::<BwSF>::new_witness(ark_relations::ns!(cs, "l1_r"), || Ok(*b)).unwrap(),
-            )).collect();
-
-        let l2_cum_sum_qr_fvar: Vec<(FpVar<BwSF>, FpVar<BwSF>)> = self.l2_cum_sum_qr.iter()
-            .map(|(a,b)| (
-                FpVar::<BwSF>::new_witness(ark_relations::ns!(cs, "l2_q"), || Ok(*a)).unwrap(),
-                FpVar::<BwSF>::new_witness(ark_relations::ns!(cs, "l2_r"), || Ok(*b)).unwrap(),
-            )).collect();
-        // let l1_poly = DensePolynomialVar::<BwSF>::from_coefficients_vec(l1_1d_fvar);
-        // let l2_poly = DensePolynomialVar::<BwSF>::from_coefficients_vec(l2_1d_fvar);
-        // let beta_fvar = FpVar::<BwSF>::new_input(ark_relations::ns!(cs, "beta var"), || Ok(self.powers_of_beta[0])).unwrap();
-        let l1_rho_fvar = FpVar::<BwSF>::new_input(ark_relations::ns!(cs, "l1 rho var"), || Ok(self.l1_rho)).unwrap();
-        let l2_rho_fvar = FpVar::<BwSF>::new_input(ark_relations::ns!(cs, "l2 rho var"), || Ok(self.l2_rho)).unwrap();
-        // let l1_rho_circ = l1_poly.evaluate(&beta_fvar).unwrap();
-        // let l2_rho_circ = l2_poly.evaluate(&beta_fvar).unwrap();
-        // l1_rho_circ.enforce_equal(&l1_rho_fvar).unwrap();
-        // l2_rho_circ.enforce_equal(&l2_rho_fvar).unwrap();
-        let bls_mod_fvar = FpVar::<BwSF>::new_constant(ark_relations::ns!(cs, "bls modulus"), self.bls_modulus).unwrap();
-
-        let g1_l1_l_var = G1PreparedVar::<ark_bls12_377::Parameters>::new_input(cs.clone(), || Ok(self.g1_l1_l.clone())).unwrap();
-        let g1_l1_r_var = G1PreparedVar::<ark_bls12_377::Parameters>::new_input(cs.clone(), || Ok(self.g1_l1_r.clone())).unwrap();  
-        let g1_l2_l_var = G1PreparedVar::<ark_bls12_377::Parameters>::new_input(cs.clone(), || Ok(self.g1_l2_l.clone())).unwrap();
-        let g1_l2_r_var = G1PreparedVar::<ark_bls12_377::Parameters>::new_input(cs.clone(), || Ok(self.g1_l2_r.clone())).unwrap();  
-        let g2_l_var = G2PreparedVar::<ark_bls12_377::Parameters>::new_input(cs.clone(), || Ok(self.g2_l.clone())).unwrap();
-        let g2_r_var = G2PreparedVar::<ark_bls12_377::Parameters>::new_input(cs.clone(), || Ok(self.g2_r.clone())).unwrap();  
-
-
-        let full_circuit = FullCircuitOpLv3 {
-            x: x_fvar,
-            l1: l1_fvar,
-            l2: l2_fvar,
-            z: z_fvar.clone(),
-            y: y_fvar,
-            relu_output1: relu_output1_fvar,
-            remainder1: self.remainder1,
-            remainder2: self.remainder2,
-            div1: self.div1,
-            div2: self.div2,
-            cmp_res: self.cmp_res,
-            y_0_converted: self.y_0_converted,
-            z_0_converted: self.z_0_converted,
-            x_0: self.x_0,
-            y_0: self.y_0,
-            z_0: self.z_0,
-            l1_mat_0: self.l1_mat_0,
-            l2_mat_0: self.l2_mat_0,
-            multiplier_l1: self.multiplier_l1,
-            multiplier_l2: self.multiplier_l2,
-            two_power_8: self.two_power_8,
-            m_exp: self.m_exp,
-            zero: self.zero,
-        };
-
-        let argmax_circuit = ArgmaxCircuitU8 {
-            input: z_fvar,
-            argmax_res: argmax_fvar,
-        };
-
-        let poly_circuit_l1 = PolyCircuit {
-            vector_beta_ip: l1_beta_fvar,
-            beta_qr: l1_beta_qr_fvar,
-            cum_sum_qr: l1_cum_sum_qr_fvar,
-            rho: l1_rho_fvar,
-            bls_mod: bls_mod_fvar.clone(),
-        };
-
-        let poly_circuit_l2 = PolyCircuit {
-            vector_beta_ip: l2_beta_fvar,
-            beta_qr: l2_beta_qr_fvar,
-            cum_sum_qr: l2_cum_sum_qr_fvar,
-            rho: l2_rho_fvar,
-            bls_mod: bls_mod_fvar.clone(),
-        };
-
-        let commit_circuit_l1 = KZGCommitCircuit {
-            g2_l: g2_l_var.clone(),
-            g2_r: g2_r_var.clone(),
-            g1_l: g1_l1_l_var.clone(),
-            g1_r: g1_l1_r_var.clone(),
-        };
-
-        let commit_circuit_l2 = KZGCommitCircuit {
-            g2_l: g2_l_var,
-            g2_r: g2_r_var,
-            g1_l: g1_l2_l_var.clone(),
-            g1_r: g1_l2_r_var.clone(),
-        };
-
-        full_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        argmax_circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        poly_circuit_l1
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        poly_circuit_l2
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        commit_circuit_l1
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        commit_circuit_l2
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
-        Ok(())
-    }
-}
-
-#[derive(Clone)]
-pub struct FullCircuitOpLv3<F: PrimeField> {
-    pub x: Vec<FpVar<F>>,
-    pub l1: Vec<Vec<FpVar<F>>>,
-    pub l2: Vec<Vec<FpVar<F>>>,
-    pub z: Vec<FpVar<F>>,
-    pub y: Vec<FpVar<F>>,
-    
-    pub relu_output1: Vec<FpVar<F>>,
-
-    pub remainder1: Vec<F>,
-    pub div1: Vec<F>,
-    pub remainder2: Vec<F>,
-    pub div2: Vec<F>,
-    
-    pub cmp_res: Vec<bool>,
-    pub x_0: F,
-    pub y_0: F,
-    pub y_0_converted: Vec<F>,
-    pub z_0: F,
-    pub z_0_converted: Vec<F>,    
-    pub l1_mat_0: F,
-    pub l2_mat_0: F,
-    pub multiplier_l1: Vec<F>,
-    pub multiplier_l2: Vec<F>,
-    pub two_power_8: F,
-    pub m_exp: F,
-    pub zero: F,
-}
-
-impl <F: PrimeField> ConstraintSynthesizer<F> for FullCircuitOpLv3<F> {
-    fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
-        let mut _cir_number = cs.num_constraints();
-        // CIRCUITS
-
+        let y_fqvar = generate_fqvar(cs.clone(), y.clone());
+        let l1_fqvar_input = generate_fqvar_witness2D(cs.clone(), self.l1.clone());
+        // y_0 and multiplier_l1 are both constants.
+        let mut y0_converted: Vec<u64> = Vec::new();
+        for i in 0..self.multiplier_l1.len() {
+            let m = (self.multiplier_l1[i] * (2u64.pow(M_EXP)) as f32) as u64;
+            y0_converted.push((self.y_0 as u64 * 2u64.pow(M_EXP)) / m);
+        }
         let l1_circuit = FCCircuitOp3 {
-            x: self.x.clone(),
-            l1_mat: self.l1.clone(),
-            y: self.y.clone(),
-            remainder: self.remainder1,
-            div: self.div1,
+            x: x_fqvar,
+            l1_mat: l1_fqvar_input,
+            y: y_fqvar.clone(),
+            remainder: remainder1.clone(),
+            div: div1.clone(),
 
             x_0: self.x_0,
             l1_mat_0: self.l1_mat_0,
-            y_0: self.y_0_converted,
+            y_0: y0_converted,
 
             multiplier: self.multiplier_l1,
-
-            two_power_8: self.two_power_8,
-            m_exp: self.m_exp,
-            zero: self.zero,
         };
 
         l1_circuit.generate_constraints(cs.clone())?;
@@ -803,11 +287,12 @@ impl <F: PrimeField> ConstraintSynthesizer<F> for FullCircuitOpLv3<F> {
         );
         _cir_number = cs.num_constraints();
 
+        let relu1_output_var = generate_fqvar(cs.clone(), y_out.clone());
         let relu_circuit = ReLUCircuitOp3 {
-            y_in: self.y,
-            y_out: self.relu_output1.clone(),
+            y_in: y_fqvar.clone(),
+            y_out: relu1_output_var.clone(),
             y_zeropoint: self.y_0,
-            cmp_res: self.cmp_res.clone(),
+            cmp_res: cmp_res.clone(),
         };
         relu_circuit.generate_constraints(cs.clone())?;
 
@@ -818,23 +303,40 @@ impl <F: PrimeField> ConstraintSynthesizer<F> for FullCircuitOpLv3<F> {
         );
 
         _cir_number = cs.num_constraints();
+        let l2_mat_ref: Vec<&[u8]> = self.l2.iter().map(|x| x.as_ref()).collect();
+        let mut zz = vec![0u8; self.l2.len()];
+        let (remainder2, div2) = vec_mat_mul_with_remainder_u8(
+            &y_out,
+            l2_mat_ref[..].as_ref(),
+            &mut zz,
+            self.y_0,
+            self.l2_mat_0,
+            self.z_0,
+            &self.multiplier_l2,
+        );
+
+        // z_0 and multiplier_l2 are both constants.
+        let z_fqvar = generate_fqvar(cs.clone(), zz.clone());
+        let l2_fqvar_input = generate_fqvar_witness2D(cs.clone(), self.l2.clone());
+
+        let mut z0_converted: Vec<u64> = Vec::new();
+        for i in 0..self.multiplier_l2.len() {
+            let m = (self.multiplier_l2[i] * (2u64.pow(M_EXP)) as f32) as u64;
+            z0_converted.push((self.z_0 as u64 * 2u64.pow(M_EXP)) / m);
+        }
 
         let l2_circuit = FCCircuitOp3 {
-            x: self.relu_output1.clone(),
-            l1_mat: self.l2,
-            y: self.z,
-            remainder: self.remainder2,
-            div: self.div2,
+            x: relu1_output_var.clone(),
+            l1_mat: l2_fqvar_input,
+            y: z_fqvar.clone(),
+            remainder: remainder2.clone(),
+            div: div2.clone(),
 
             x_0: self.y_0,
             l1_mat_0: self.l2_mat_0,
-            y_0: self.z_0_converted,
+            y_0: z0_converted,
 
             multiplier: self.multiplier_l2,
-
-            two_power_8: self.two_power_8,
-            m_exp: self.m_exp,
-            zero: self.zero,
         };
         l2_circuit.generate_constraints(cs.clone())?;
         println!(
@@ -850,5 +352,470 @@ impl <F: PrimeField> ConstraintSynthesizer<F> for FullCircuitOpLv3<F> {
         );
         Ok(())
     }
+}*/
+
+
+
+#[derive(Clone)]
+pub struct FullCircuitOpLv3PoseidonClassification {
+    pub params: SPNGParam,
+
+    pub x: Vec<u8>,
+    pub x_squeeze: SPNGOutput,
+    pub l1: Vec<Vec<u8>>,
+    pub l1_squeeze: SPNGOutput,
+    pub l2: Vec<Vec<u8>>,
+    pub l2_squeeze: SPNGOutput,
+    pub z: Vec<u8>,
+    pub z_squeeze: SPNGOutput,
+
+    pub x_0: u8,
+    pub y_0: u8,
+    pub z_0: u8,
+    pub l1_mat_0: u8,
+    pub l2_mat_0: u8,
+    pub multiplier_l1: Vec<f32>,
+    pub multiplier_l2: Vec<f32>,
+
+    pub argmax_res: usize
 }
 
+impl ConstraintSynthesizer<Fq> for FullCircuitOpLv3PoseidonClassification {
+    fn generate_constraints(self, cs: ConstraintSystemRef<Fq>) -> Result<(), SynthesisError> {
+        let full_circuit = FullCircuitOpLv3Poseidon {
+            params: self.params.clone(),
+            x: self.x.clone(),
+            x_squeeze: self.x_squeeze.clone(),
+            l1: self.l1,
+            l1_squeeze: self.l1_squeeze.clone(),
+            l2: self.l2,
+            l2_squeeze: self.l2_squeeze.clone(),
+            z: self.z.clone(),
+            z_squeeze: self.z_squeeze.clone(),
+            
+            x_0: self.x_0,
+            y_0: self.y_0,
+            z_0: self.z_0,
+            l1_mat_0: self.l1_mat_0,
+            l2_mat_0: self.l2_mat_0,
+            multiplier_l1: self.multiplier_l1.clone(),
+            multiplier_l2: self.multiplier_l2.clone(),
+        };
+
+        let argmax_circuit = ArgmaxCircuitU8 {
+            input: self.z.clone(),
+            argmax_res: self.argmax_res.clone(),
+        };
+        let timer = start_timer!(|| "FC constraints");
+        full_circuit
+            .clone()
+            .generate_constraints(cs.clone())
+            .unwrap();
+        end_timer!(timer);
+        let timer = start_timer!(|| "ArgMax constraints");
+        argmax_circuit
+            .clone()
+            .generate_constraints(cs.clone())
+            .unwrap();
+        end_timer!(timer);
+        println!(
+            "FullCircuit {}",
+            cs.num_constraints()
+        );
+
+        Ok(())
+    }
+}
+
+#[derive(Clone)]
+pub struct FullCircuitOpLv3Poseidon {
+    pub params: SPNGParam,
+
+    pub x: Vec<u8>,
+    pub x_squeeze: SPNGOutput,
+    pub l1: Vec<Vec<u8>>,
+    pub l1_squeeze: SPNGOutput,
+    pub l2: Vec<Vec<u8>>,
+    pub l2_squeeze: SPNGOutput,
+    pub z: Vec<u8>,
+    pub z_squeeze: SPNGOutput,
+
+    pub x_0: u8,
+    pub y_0: u8,
+    pub z_0: u8,
+    pub l1_mat_0: u8,
+    pub l2_mat_0: u8,
+    pub multiplier_l1: Vec<f32>,
+    pub multiplier_l2: Vec<f32>,
+}
+
+impl ConstraintSynthesizer<Fq> for FullCircuitOpLv3Poseidon {
+    fn generate_constraints(self, cs: ConstraintSystemRef<Fq>) -> Result<(), SynthesisError> {
+        //x commitment
+        let mut _cir_number = cs.num_constraints();
+        let x_com_circuit = SPNGCircuit {
+            param: self.params.clone(),
+            input: self.x.clone(),
+            output: self.x_squeeze.clone()
+        };
+        x_com_circuit.generate_constraints(cs.clone())?;
+
+        println!("x {} {}", cs.num_constraints() - _cir_number, (cs.num_constraints() - _cir_number) / self.x.len());
+
+        let l1_mat_1d = convert_2d_vector_into_1d(self.l1.clone());
+        let l2_mat_1d = convert_2d_vector_into_1d(self.l2.clone());
+
+        let l1_com_circuit = SPNGCircuit {
+            param: self.params.clone(),
+            input: l1_mat_1d.clone(),
+            output: self.l1_squeeze.clone()
+        };
+        l1_com_circuit.generate_constraints(cs.clone())?;
+        println!("l1 {} {}", cs.num_constraints() - _cir_number, (cs.num_constraints() - _cir_number) / l1_mat_1d.len());
+        _cir_number = cs.num_constraints();
+
+        let l2_com_circuit = SPNGCircuit {
+            param: self.params.clone(),
+            input: l2_mat_1d.clone(),
+            output: self.l2_squeeze.clone()
+        };
+        l2_com_circuit.generate_constraints(cs.clone())?;
+        println!("l2 {} {}", cs.num_constraints() - _cir_number, (cs.num_constraints() - _cir_number) / l2_mat_1d.len());
+        _cir_number = cs.num_constraints();
+
+        let z_com_circuit = SPNGCircuit {
+            param: self.params.clone(),
+            input: self.z.clone(),
+            output: self.z_squeeze.clone()
+        };
+        z_com_circuit.generate_constraints(cs.clone())?;
+        println!("z {} {}", cs.num_constraints() - _cir_number, (cs.num_constraints() - _cir_number) / self.z.len());
+        _cir_number = cs.num_constraints();
+
+
+        // layer 1
+        let mut y = vec![0u8; self.l1.len()];
+        let l1_mat_ref: Vec<&[u8]> = self.l1.iter().map(|x| x.as_ref()).collect();
+        let x_fqvar = generate_fqvar_ipt(cs.clone(), self.x.clone());
+
+        let (remainder1, div1) = vec_mat_mul_with_remainder_u8(
+            &self.x,
+            l1_mat_ref[..].as_ref(),
+            &mut y,
+            self.x_0,
+            self.l1_mat_0,
+            self.y_0,
+            &self.multiplier_l1,
+        );
+
+        let mut y_out = y.clone();
+        let cmp_res = relu_u8(&mut y_out, self.y_0);
+
+        let y_fqvar = generate_fqvar(cs.clone(), y.clone());
+        let l1_fqvar_input = generate_fqvar_witness2D(cs.clone(), self.l1.clone());
+        // y_0 and multiplier_l1 are both constants.
+        let mut y0_converted: Vec<u64> = Vec::new();
+        for i in 0..self.multiplier_l1.len() {
+            let m = (self.multiplier_l1[i] * (2u64.pow(M_EXP)) as f32) as u64;
+            y0_converted.push((self.y_0 as u64 * 2u64.pow(M_EXP)) / m);
+        }
+        let l1_circuit = FCCircuitOp3 {
+            x: x_fqvar,
+            l1_mat: l1_fqvar_input,
+            y: y_fqvar.clone(),
+            remainder: remainder1.clone(),
+            div: div1.clone(),
+
+            x_0: self.x_0,
+            l1_mat_0: self.l1_mat_0,
+            y_0: y0_converted,
+
+            multiplier: self.multiplier_l1,
+        };
+
+        l1_circuit.generate_constraints(cs.clone())?;
+        println!(
+            "FC1 {} {}",
+            cs.num_constraints() - _cir_number,
+            cs.num_constraints()
+        );
+        _cir_number = cs.num_constraints();
+
+        let relu1_output_var = generate_fqvar(cs.clone(), y_out.clone());
+        let relu_circuit = ReLUCircuitOp3 {
+            y_in: y_fqvar.clone(),
+            y_out: relu1_output_var.clone(),
+            y_zeropoint: self.y_0,
+            cmp_res: cmp_res.clone(),
+        };
+        relu_circuit.generate_constraints(cs.clone())?;
+
+        println!(
+            "ReLU1 {} {}",
+            cs.num_constraints() - _cir_number,
+            cs.num_constraints()
+        );
+
+        _cir_number = cs.num_constraints();
+        let l2_mat_ref: Vec<&[u8]> = self.l2.iter().map(|x| x.as_ref()).collect();
+        let mut zz = vec![0u8; self.l2.len()];
+        let (remainder2, div2) = vec_mat_mul_with_remainder_u8(
+            &y_out,
+            l2_mat_ref[..].as_ref(),
+            &mut zz,
+            self.y_0,
+            self.l2_mat_0,
+            self.z_0,
+            &self.multiplier_l2,
+        );
+
+        // z_0 and multiplier_l2 are both constants.
+        let z_fqvar = generate_fqvar(cs.clone(), zz.clone());
+        let l2_fqvar_input = generate_fqvar_witness2D(cs.clone(), self.l2.clone());
+
+        let mut z0_converted: Vec<u64> = Vec::new();
+        for i in 0..self.multiplier_l2.len() {
+            let m = (self.multiplier_l2[i] * (2u64.pow(M_EXP)) as f32) as u64;
+            z0_converted.push((self.z_0 as u64 * 2u64.pow(M_EXP)) / m);
+        }
+
+        let l2_circuit = FCCircuitOp3 {
+            x: relu1_output_var.clone(),
+            l1_mat: l2_fqvar_input,
+            y: z_fqvar.clone(),
+            remainder: remainder2.clone(),
+            div: div2.clone(),
+
+            x_0: self.y_0,
+            l1_mat_0: self.l2_mat_0,
+            y_0: z0_converted,
+
+            multiplier: self.multiplier_l2,
+        };
+        l2_circuit.generate_constraints(cs.clone())?;
+        println!(
+            "FC2 {} {}",
+            cs.num_constraints() - _cir_number,
+            cs.num_constraints()
+        );
+        _cir_number = cs.num_constraints();
+        Ok(())
+    }
+}
+
+#[derive(Clone)]
+pub struct FullCircuitOpLv3PolyClassification<F: PrimeField + std::convert::From<ark_ff::BigInteger256>> {
+    pub x: Vec<u8>,
+    pub l1: Vec<Vec<u8>>,
+    pub l2: Vec<Vec<u8>>,
+    pub z: Vec<u8>,
+    pub rho: F,
+    pub powers_of_beta: Vec<F>,
+
+    pub x_0: u8,
+    pub y_0: u8,
+    pub z_0: u8,
+    pub l1_mat_0: u8,
+    pub l2_mat_0: u8,
+    pub multiplier_l1: Vec<f32>,
+    pub multiplier_l2: Vec<f32>,
+
+    pub argmax_res: usize
+}
+
+impl <F: PrimeField + std::convert::From<ark_ff::BigInteger256>>ConstraintSynthesizer<F> for FullCircuitOpLv3PolyClassification<F> {
+    fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
+        let full_circuit = FullCircuitOpLv3Poly {
+            x: self.x.clone(),
+            l1: self.l1,
+            l2: self.l2,
+            z: self.z.clone(),
+            rho: self.rho.clone(),
+            powers_of_beta: self.powers_of_beta.clone(),
+            x_0: self.x_0,
+            y_0: self.y_0,
+            z_0: self.z_0,
+            l1_mat_0: self.l1_mat_0,
+            l2_mat_0: self.l2_mat_0,
+            multiplier_l1: self.multiplier_l1.clone(),
+            multiplier_l2: self.multiplier_l2.clone(),
+        };
+
+        let argmax_circuit = ArgmaxCircuitU8 {
+            input: self.z.clone(),
+            argmax_res: self.argmax_res.clone(),
+        };
+
+        full_circuit
+            .clone()
+            .generate_constraints(cs.clone())
+            .unwrap();
+        argmax_circuit
+            .clone()
+            .generate_constraints(cs.clone())
+            .unwrap();
+
+        println!(
+            "FullCircuit {}",
+            cs.num_constraints()
+        );
+
+        Ok(())
+    }
+}
+
+#[derive(Clone)]
+pub struct FullCircuitOpLv3Poly <F: PrimeField + std::convert::From<ark_ff::BigInteger256>> {
+    pub x: Vec<u8>,
+    pub l1: Vec<Vec<u8>>,
+    pub l2: Vec<Vec<u8>>,
+    pub z: Vec<u8>,
+    pub rho: F,
+    pub powers_of_beta: Vec<F>,
+
+    pub x_0: u8,
+    pub y_0: u8,
+    pub z_0: u8,
+    pub l1_mat_0: u8,
+    pub l2_mat_0: u8,
+    pub multiplier_l1: Vec<f32>,
+    pub multiplier_l2: Vec<f32>,
+}
+
+impl <F: PrimeField + std::convert::From<ark_ff::BigInteger256>>ConstraintSynthesizer<F> for FullCircuitOpLv3Poly<F> {
+    fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
+        let beta_var = FpVar::<F>::new_input(ark_relations::ns!(cs, "tmp"), || Ok(self.powers_of_beta[1].clone())).unwrap();
+        let rho_var = FpVar::<F>::new_input(ark_relations::ns!(cs, "tmp"), || Ok(self.rho.clone())).unwrap();
+        //x commitment
+        let mut _cir_number = cs.num_constraints();
+        // layer 1
+        let mut y = vec![0u8; self.l1.len()];
+        let l1_mat_ref: Vec<&[u8]> = self.l1.iter().map(|x| x.as_ref()).collect();
+        let x_fqvar = generate_fqvar_ipt(cs.clone(), self.x.clone());
+
+        let (remainder1, div1) = vec_mat_mul_with_remainder_u8(
+            &self.x,
+            l1_mat_ref[..].as_ref(),
+            &mut y,
+            self.x_0,
+            self.l1_mat_0,
+            self.y_0,
+            &self.multiplier_l1,
+        );
+
+        let mut y_out = y.clone();
+        let cmp_res = relu_u8(&mut y_out, self.y_0);
+
+        let y_fqvar = generate_fqvar(cs.clone(), y.clone());
+        let l1_fqvar_input = generate_fqvar_witness2D(cs.clone(), self.l1.clone());
+        // y_0 and multiplier_l1 are both constants.
+        let mut y0_converted: Vec<u64> = Vec::new();
+        for i in 0..self.multiplier_l1.len() {
+            let m = (self.multiplier_l1[i] * (2u64.pow(M_EXP)) as f32) as u64;
+            y0_converted.push((self.y_0 as u64 * 2u64.pow(M_EXP)) / m);
+        }
+        let l1_circuit = FCCircuitOp3 {
+            x: x_fqvar.clone(),
+            l1_mat: l1_fqvar_input.clone(),
+            y: y_fqvar.clone(),
+            remainder: remainder1.clone(),
+            div: div1.clone(),
+
+            x_0: self.x_0,
+            l1_mat_0: self.l1_mat_0,
+            y_0: y0_converted,
+
+            multiplier: self.multiplier_l1,
+        };
+
+        l1_circuit.generate_constraints(cs.clone())?;
+        println!(
+            "FC1 {} {}",
+            cs.num_constraints() - _cir_number,
+            cs.num_constraints()
+        );
+        _cir_number = cs.num_constraints();
+
+        let relu1_output_var = generate_fqvar(cs.clone(), y_out.clone());
+        let relu_circuit = ReLUCircuitOp3 {
+            y_in: y_fqvar.clone(),
+            y_out: relu1_output_var.clone(),
+            y_zeropoint: self.y_0,
+            cmp_res: cmp_res.clone(),
+        };
+        relu_circuit.generate_constraints(cs.clone())?;
+
+        println!(
+            "ReLU1 {} {}",
+            cs.num_constraints() - _cir_number,
+            cs.num_constraints()
+        );
+
+        _cir_number = cs.num_constraints();
+        let l2_mat_ref: Vec<&[u8]> = self.l2.iter().map(|x| x.as_ref()).collect();
+        let mut zz = vec![0u8; self.l2.len()];
+        let (remainder2, div2) = vec_mat_mul_with_remainder_u8(
+            &y_out,
+            l2_mat_ref[..].as_ref(),
+            &mut zz,
+            self.y_0,
+            self.l2_mat_0,
+            self.z_0,
+            &self.multiplier_l2,
+        );
+
+        // z_0 and multiplier_l2 are both constants.
+        let z_fqvar = generate_fqvar(cs.clone(), zz.clone());
+        let l2_fqvar_input = generate_fqvar_witness2D(cs.clone(), self.l2.clone());
+        let mut z0_converted: Vec<u64> = Vec::new();
+        for i in 0..self.multiplier_l2.len() {
+            let m = (self.multiplier_l2[i] * (2u64.pow(M_EXP)) as f32) as u64;
+            z0_converted.push((self.z_0 as u64 * 2u64.pow(M_EXP)) / m);
+        }
+
+        let l2_circuit = FCCircuitOp3 {
+            x: relu1_output_var.clone(),
+            l1_mat: l2_fqvar_input.clone(),
+            y: z_fqvar.clone(),
+            remainder: remainder2.clone(),
+            div: div2.clone(),
+
+            x_0: self.y_0,
+            l1_mat_0: self.l2_mat_0,
+            y_0: z0_converted,
+
+            multiplier: self.multiplier_l2,
+        };
+        l2_circuit.generate_constraints(cs.clone())?;
+        println!(
+            "FC2 {} {}",
+            cs.num_constraints() - _cir_number,
+            cs.num_constraints()
+        );
+        _cir_number = cs.num_constraints();
+        let mut commit_vec = Vec::<FpVar<F>>::new();
+        commit_vec.extend(x_fqvar);
+        commit_vec.extend(convert_2d_vector_into_1d(l1_fqvar_input));
+        commit_vec.extend(convert_2d_vector_into_1d(l2_fqvar_input));
+        commit_vec.extend(z_fqvar);
+        let commit_len = commit_vec.len();
+
+        /*let intermediate = commit_vec[0].clone() * beta_vars[0].clone();
+        let prev = intermediate.clone();
+        for idx in 1..commit_len {
+            let intermediatee = commit_vec[idx].clone() * beta_vars[idx].clone();
+            let prevv = 
+        }
+        rho_vec[commit_len - 1].enforce_equal(&rho_var);*/
+
+        //let commit_vec_f: Vec<Fq> = commit_vec.iter().map(|x| x.into()).collect();
+
+        let commit_poly = DensePolynomialVar::<F>::from_coefficients_vec(commit_vec);
+        let rho_circ = commit_poly.evaluate(&beta_var)?;
+        rho_circ.enforce_equal(&rho_var).unwrap();
+
+        println!("Commit {}", cs.num_constraints() - _cir_number);
+
+        Ok(())
+    }
+}

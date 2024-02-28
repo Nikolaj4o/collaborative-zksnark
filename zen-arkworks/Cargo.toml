@@ -1,5 +1,5 @@
 [package]
-name = "zen-arkworks"
+name = "pedersen_example"
 version = "0.1.0"
 authors = ["Lianke Qin"]
 edition = "2018"
@@ -32,7 +32,7 @@ rand_xorshift = { version = "0.2" }
 
 ark-ff = { path = "../algebra/ff", version = "0.2.0", default-features = false, features = [ "asm" ] }
 ark-bls12-377 = { path = "../curves/bls12_377", version = "0.2.0", default-features = false, features = ["curve"] }
-ark-bls12-381 = { version = "0.2.0", features = ["curve"] }
+ark-bls12-381 = { path = "../curves/bls12_381", version = "0.2.0", features = ["curve"] }
 ark-bn254 = { path = "../curves/bn254", version = "0.2.0", default-features = false, features = ["curve"] }
 ark-bw6-761 = { path = "../curves/bw6_761", version = "0.2.0" }
 
@@ -65,5 +65,3 @@ criterion = "0.3.4"
 
 
 blake2 = { version = "0.9", default-features = false }
-
-

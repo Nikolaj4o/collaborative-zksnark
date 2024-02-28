@@ -6,4 +6,4 @@ cargo build --release --bin proof -q 2> /dev/null
 
 BIN=./target/release/proof
 
-$BIN -p groth16 -c shallownet_mnist --computation-size $1 local
+$BIN -p groth16 -c squaring --computation-size $1 local

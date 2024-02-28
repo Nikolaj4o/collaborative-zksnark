@@ -1,4 +1,4 @@
-use crate::pedersen::*;
+/*use crate::pedersen::*;
 use ark_crypto_primitives::commitment::pedersen::constraints::CommGadget;
 use ark_crypto_primitives::commitment::pedersen::Randomness;
 use ark_crypto_primitives::CommitmentGadget;
@@ -99,4 +99,4 @@ impl ConstraintSynthesizer<Fq> for PedersenComCircuit {
         println!("total cs for Commitment: {}", cs.num_constraints());
         Ok(())
     }
-}
+}*/

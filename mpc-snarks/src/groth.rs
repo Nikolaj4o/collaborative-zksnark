@@ -23,7 +23,7 @@ pub fn mpc_test_prove_and_verify<E: PairingEngine, S: PairingShare<E>>(n_iters: 
         let mut c = a;
         c *= &b;
 
-        let (_, mpc_proof) = prover::create_random_proof::<MpcPairingEngine<E, S>, _, _>(
+        let mpc_proof = prover::create_random_proof::<MpcPairingEngine<E, S>, _, _>(
             MySillyCircuit {
                 a: Some(a),
                 b: Some(b),

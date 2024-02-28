@@ -1,0 +1,4 @@
+Start:   KZG10::Setup with degree 102425
+··Start:   Generating powers of G
+··End:     Generating powers of G ..................................................1.278s
+··Start:   Generating powers of gamma * G

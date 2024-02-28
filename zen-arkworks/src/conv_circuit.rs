@@ -55,7 +55,7 @@ impl ConstraintSynthesizer<Fq> for ConvCircuitOp3 {
         //println!("kernel size {} {} {} {}", num_kernels, num_channels, kernel_size, kernel_size);
         if num_channels * kernel_size * kernel_size < SIMD_BOTTLENECK {
             //we do not use SIMD
-            println!("we don't use old SIMD");
+            //println!("we don't use old SIMD");
             for k in 0..num_kernels {
                 //println!("k {} multiplier {}", k, ((self.multiplier[k] * (2u32.pow(M_EXP)) as f32) as u128));
                 let multiplier: Fq = ((self.multiplier[k] * (2u32.pow(M_EXP)) as f32) as u128).into();
@@ -127,7 +127,7 @@ impl ConstraintSynthesizer<Fq> for ConvCircuitOp3 {
 
             if fours >= 4 {
                 //if fours is larger than 4, we can SIMD among multiple channels
-                println!("OLD SIMD conv among multiple kernel positions on image");
+                //println!("OLD SIMD conv among multiple kernel positions on image");
                 for k in 0..num_kernels {
                     //println!("k {} multiplier {}", k, ((self.multiplier[k] * (2u32.pow(M_EXP)) as f32) as u128));
                     let multiplier: Fq =
@@ -401,9 +401,9 @@ impl ConstraintSynthesizer<Fq> for ConvCircuitOp3 {
                     }
                 }
             } else {
-                println!(
+                /*println!(
                     "OLD SIMD conv among multiple kernel channels because now input is too small."
-                );
+                );*/
                 //if fours is 0, then we need to SIMD among multiple kernels.
                 let k_fours = (num_kernels / 4) * 4;
                 for n in 0..batch_size {

@@ -1,0 +1,95 @@
+commit time 132.7405ms
+Start:   Groth16::Generator
+··Start:   Constraint synthesis
+x 37822
+z 336 38158
+conv1 29531 67689
+conv2 658017 696175
+conv3 3875850 3914008
+fc1 5484897 5523055
+fc2 15801 5538856
+Conv1 1922489 7445544
+Relu1 75264 7520808
+AvgPool1 6272 7527080
+Conv2 2863360 10390440
+Relu2 19200 10409640
+AvgPool2 1600 10411240
+Conv3 424960 10836200
+Relu3 3072 10839272
+FC1 53120 10892392
+Relu4 384 10892776
+FC2 1786 10894562
+ArgmaxCircuitU8 18950 10913512
+FullCircuit 10913512
+··End:     Constraint synthesis ....................................................16.177s
+··Start:   Inlining LCs
+··End:     Inlining LCs ............................................................69.135s
+··Start:   Constructing evaluation domain
+··End:     Constructing evaluation domain ..........................................19.542µs
+··Start:   R1CS to QAP Instance Map with Evaluation
+····Start:   Evaluate Lagrange coefficients
+····End:     Evaluate Lagrange coefficients ........................................2.358s
+··End:     R1CS to QAP Instance Map with Evaluation ................................56.052s
+··Start:   Compute G2 table
+··End:     Compute G2 table ........................................................1.928s
+··Start:   Calculate B G2
+··End:     Calculate B G2 ..........................................................184.779s
+··Start:   Compute G1 window table
+··End:     Compute G1 window table .................................................1.927s
+··Start:   Generate the R1CS proving key
+····Start:   Calculate A
+····End:     Calculate A ...........................................................159.027s
+····Start:   Calculate B G1
+····End:     Calculate B G1 ........................................................68.626s
+····Start:   Calculate H
+····End:     Calculate H ...........................................................185.681s
+····Start:   Calculate L
+····End:     Calculate L ...........................................................173.144s
+··End:     Generate the R1CS proving key ...........................................586.484s
+··Start:   Generate the R1CS verification key
+··End:     Generate the R1CS verification key ......................................4.226ms
+··Start:   Convert proving key elements to affine
+··End:     Convert proving key elements to affine ..................................78.277s
+End:     Groth16::Generator ........................................................996.202s
+setup time 996.473427708s
+crs size: 4822573200
+Start:   Groth16::Prover
+··Start:   Constraint synthesis
+x 37822
+z 336 38158
+conv1 29531 67689
+conv2 658017 696175
+conv3 3875850 3914008
+fc1 5484897 5523055
+fc2 15801 5538856
+Conv1 1922489 7445544
+Relu1 75264 7520808
+AvgPool1 6272 7527080
+Conv2 2863360 10390440
+Relu2 19200 10409640
+AvgPool2 1600 10411240
+Conv3 424960 10836200
+Relu3 3072 10839272
+FC1 53120 10892392
+Relu4 384 10892776
+FC2 1786 10894562
+ArgmaxCircuitU8 18950 10913512
+FullCircuit 10913512
+··End:     Constraint synthesis ....................................................18.048s
+··Start:   Inlining LCs
+··End:     Inlining LCs ............................................................73.318s
+··Start:   R1CS to QAP witness map
+··End:     R1CS to QAP witness map .................................................106.943s
+··Start:   Compute C
+··End:     Compute C ...............................................................214.489s
+··Start:   Compute A
+··End:     Compute A ...............................................................57.464s
+··Start:   Compute B in G1
+··End:     Compute B in G1 .........................................................22.931s
+··Start:   Compute B in G2
+··End:     Compute B in G2 .........................................................66.954s
+··Start:   Finish C
+··End:     Finish C ................................................................4.083µs
+End:     Groth16::Prover ...........................................................573.859s
+prove time 573.859912667s
+1:7, 2:8verification time 5.785ms

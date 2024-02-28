@@ -135,6 +135,12 @@ impl<F: Field> Reveal for SpdzFieldShare<F> {
             mac: Reveal::from_add_shared(f * mac_share::<F>()),
         }
     }
+
+    fn unwrap_as_public(self) -> F {
+        let val = self.sh.val;
+        val
+    }
+
     fn from_add_shared(f: F) -> Self {
         Self {
             sh: Reveal::from_add_shared(f),

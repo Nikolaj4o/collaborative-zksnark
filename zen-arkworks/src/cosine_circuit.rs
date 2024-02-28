@@ -41,7 +41,7 @@ impl ConstraintSynthesizer<Fq> for CosineSimilarityCircuitU8 {
             left.enforce_cmp(&right, Ordering::Less, true).unwrap();
         }
         println!(
-            "Number of constraints for CosineSimilarity Circuit {}, Accumulated constraints {}",
+            "CosineSimilarity {} {}",
             cs.num_constraints() - _cir_number,
             cs.num_constraints()
         );

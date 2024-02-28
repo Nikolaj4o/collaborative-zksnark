@@ -4,7 +4,7 @@ use crate::*;
 pub const DEFAULT_ZERO_POINT: u8 = 10;
 
 #[allow(non_snake_case)]
-pub fn relu_u8(input: &mut [u8], zero_point: u8) -> Vec<bool> {
+pub(crate) fn relu_u8(input: &mut [u8], zero_point: u8) -> Vec<bool> {
     let mut cmp_res: Vec<bool> = Vec::new();
     for e in input {
         if *e < zero_point {
@@ -76,7 +76,7 @@ pub(crate) fn scalar_with_remainder_u8(a: &[u8], b: &[u8], a_0: u8, b_0: u8, y_0
 }
 
 //return the remainder of divided by 2^24
-pub fn vec_mat_mul_with_remainder_u8(
+pub(crate) fn vec_mat_mul_with_remainder_u8(
     vec: &[u8],
     mat: &[&[u8]],
     res: &mut [u8],
@@ -319,7 +319,7 @@ pub fn lenet_circuit_forward_u8(
     multiplier_fc1: Vec<f32>,
     multiplier_fc2: Vec<f32>,
 ) -> Vec<Vec<u8>> {
-    println!("lenet vallina forward");
+    //println!("lenet vallina forward");
     //layer 1
     let mut conv1_output = vec![vec![vec![vec![0u8; x[0][0][0].len() - conv1_kernel[0][0][0].len() + 1];  // w - kernel_size + 1
                                         x[0][0].len() - conv1_kernel[0][0].len() + 1]; // h - kernel_size + 1

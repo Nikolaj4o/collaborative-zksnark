@@ -1,0 +1,111 @@
+Start:   KZG10::Setup with degree 442405
+··Start:   Generating powers of G
+··End:     Generating powers of G ..................................................4.988s
+··Start:   Generating powers of gamma * G
+··End:     Generating powers of gamma * G ..........................................5.915s
+··Start:   Generating negative powers of h in G2
+··End:     Generating negative powers of h in G2 ...................................16.596s
+End:     KZG10::Setup with degree 442405 ...........................................27.781s
+Start:   Committing to polynomial of degree 442405 with hiding_bound: None
+··Start:   MSM to compute commitment to plaintext poly
+····Start:   Base MSM
+····End:     Base MSM ..............................................................266.522ms
+··End:     MSM to compute commitment to plaintext poly .............................266.920ms
+··Start:   MSM to compute commitment to random poly
+····Start:   Base MSM
+····End:     Base MSM ..............................................................18.958µs
+··End:     MSM to compute commitment to random poly ................................29.917µs
+End:     Committing to polynomial of degree 442405 with hiding_bound: None .........266.974ms
+Start:   Committing to polynomial of degree 442404 with hiding_bound: None
+··Start:   MSM to compute commitment to plaintext poly
+····Start:   Base MSM
+····End:     Base MSM ..............................................................4.334s
+··End:     MSM to compute commitment to plaintext poly .............................4.334s
+··Start:   MSM to compute commitment to random poly
+····Start:   Base MSM
+····End:     Base MSM ..............................................................24.042µs
+··End:     MSM to compute commitment to random poly ................................32.333µs
+End:     Committing to polynomial of degree 442404 with hiding_bound: None .........4.335s
+commit time 32.497750334s
+Start:   Groth16::Generator
+··Start:   Constraint synthesis
+Conv1 340704 340704
+Relu1 39312 380016
+AvgPool1 3276 383292
+Conv2 903584 1286876
+Relu2 17952 1304828
+AvgPool2 1408 1306236
+Conv3 1103040 2409276
+Relu3 14400 2423676
+FC1 152180 2575856
+Relu4 252 2576108
+FC2 7200 2583308
+Commit 884811
+CosineSimilarity 2017 3470136
+FullCircuit 3470136
+··End:     Constraint synthesis ....................................................4.422s
+··Start:   Inlining LCs
+··End:     Inlining LCs ............................................................12.858s
+··Start:   Constructing evaluation domain
+··End:     Constructing evaluation domain ..........................................14.959µs
+··Start:   R1CS to QAP Instance Map with Evaluation
+····Start:   Evaluate Lagrange coefficients
+····End:     Evaluate Lagrange coefficients ........................................1.032s
+··End:     R1CS to QAP Instance Map with Evaluation ................................6.172s
+··Start:   Compute G2 table
+··End:     Compute G2 table ........................................................515.371ms
+··Start:   Calculate B G2
+··End:     Calculate B G2 ..........................................................33.201s
+··Start:   Compute G1 window table
+··End:     Compute G1 window table .................................................1.851s
+··Start:   Generate the R1CS proving key
+····Start:   Calculate A
+····End:     Calculate A ...........................................................52.513s
+····Start:   Calculate B G1
+····End:     Calculate B G1 ........................................................12.057s
+····Start:   Calculate H
+····End:     Calculate H ...........................................................89.394s
+····Start:   Calculate L
+····End:     Calculate L ...........................................................58.242s
+··End:     Generate the R1CS proving key ...........................................212.209s
+··Start:   Generate the R1CS verification key
+··End:     Generate the R1CS verification key ......................................6.542ms
+··Start:   Convert proving key elements to affine
+··End:     Convert proving key elements to affine ..................................10.655s
+End:     Groth16::Generator ........................................................282.290s
+setup time 282.399231125s
+crs size: 1810167696
+Start:   Groth16::Prover
+··Start:   Constraint synthesis
+Conv1 340704 340704
+Relu1 39312 380016
+AvgPool1 3276 383292
+Conv2 903584 1286876
+Relu2 17952 1304828
+AvgPool2 1408 1306236
+Conv3 1103040 2409276
+Relu3 14400 2423676
+FC1 152180 2575856
+Relu4 252 2576108
+FC2 7200 2583308
+Commit 884811
+CosineSimilarity 2017 3470136
+FullCircuit 3470136
+··End:     Constraint synthesis ....................................................5.347s
+··Start:   Inlining LCs
+··End:     Inlining LCs ............................................................18.246s
+··Start:   R1CS to QAP witness map
+··End:     R1CS to QAP witness map .................................................38.446s
+··Start:   Compute C
+··End:     Compute C ...............................................................88.251s
+··Start:   Compute A
+··End:     Compute A ...............................................................17.334s
+··Start:   Compute B in G1
+··End:     Compute B in G1 .........................................................1.653s
+··Start:   Compute B in G2
+··End:     Compute B in G2 .........................................................4.982s
+··Start:   Finish C
+··End:     Finish C ................................................................3.084µs
+End:     Groth16::Prover ...........................................................176.391s
+prove time 176.391579709s
+1:2, 2:3verification time 3.610083ms

@@ -1,0 +1,136 @@
+Start:   kzg param
+··Start:   KZG10::Setup with degree 102425
+····Start:   Generating powers of G
+····End:     Generating powers of G ................................................1.208s
+····Start:   Generating powers of gamma * G
+····End:     Generating powers of gamma * G ........................................1.205s
+····Start:   Generating negative powers of h in G2
+····End:     Generating negative powers of h in G2 .................................4.952s
+··End:     KZG10::Setup with degree 102425 .........................................7.429s
+End:     kzg param .................................................................7.430s
+Start:   KZG10::Setup with degree 102425
+··Start:   Generating powers of G
+··End:     Generating powers of G ..................................................1.222s
+··Start:   Generating powers of gamma * G
+··End:     Generating powers of gamma * G ..........................................1.208s
+··Start:   Generating negative powers of h in G2
+··End:     Generating negative powers of h in G2 ...................................4.825s
+End:     KZG10::Setup with degree 102425 ...........................................7.320s
+Start:   Committing to polynomial of degree 102425 with hiding_bound: None
+··Start:   MSM to compute commitment to plaintext poly
+····Start:   Base MSM
+····End:     Base MSM ..............................................................57.342ms
+··End:     MSM to compute commitment to plaintext poly .............................57.415ms
+··Start:   MSM to compute commitment to random poly
+····Start:   Base MSM
+····End:     Base MSM ..............................................................14.125µs
+··End:     MSM to compute commitment to random poly ................................21.250µs
+End:     Committing to polynomial of degree 102425 with hiding_bound: None .........57.453ms
+Start:   Committing to polynomial of degree 102424 with hiding_bound: None
+··Start:   MSM to compute commitment to plaintext poly
+····Start:   Base MSM
+····End:     Base MSM ..............................................................1.140s
+··End:     MSM to compute commitment to plaintext poly .............................1.140s
+··Start:   MSM to compute commitment to random poly
+····Start:   Base MSM
+····End:     Base MSM ..............................................................19.458µs
+··End:     MSM to compute commitment to random poly ................................27.917µs
+End:     Committing to polynomial of degree 102424 with hiding_bound: None .........1.140s
+Start:   Groth16::Generator
+··Start:   Constraint synthesis
+Number of constraints for Poly 204851, avg 1.9999902368539237
+Number of constraints for FC1 100480 accumulated constraints 305331
+Number of constraints for ReLU1 384 accumulated constraints 305715
+Number of constraints for FC2 1290 accumulated constraints 307005
+Total number of FullCircuit inference constraints 307005
+Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 327155
+··End:     Constraint synthesis ....................................................212.252ms
+··Start:   Inlining LCs
+··End:     Inlining LCs ............................................................508.141ms
+··Start:   Constructing evaluation domain
+··End:     Constructing evaluation domain ..........................................22.416µs
+··Start:   R1CS to QAP Instance Map with Evaluation
+····Start:   Evaluate Lagrange coefficients
+····End:     Evaluate Lagrange coefficients ........................................58.950ms
+··End:     R1CS to QAP Instance Map with Evaluation ................................400.429ms
+··Start:   Compute G2 table
+··End:     Compute G2 table ........................................................176.465ms
+··Start:   Calculate B G2
+··End:     Calculate B G2 ..........................................................4.981s
+··Start:   Compute G1 window table
+··End:     Compute G1 window table .................................................269.290ms
+··Start:   Generate the R1CS proving key
+····Start:   Calculate A
+····End:     Calculate A ...........................................................4.201s
+····Start:   Calculate B G1
+····End:     Calculate B G1 ........................................................1.393s
+····Start:   Calculate H
+····End:     Calculate H ...........................................................5.893s
+····Start:   Calculate L
+····End:     Calculate L ...........................................................5.835s
+··End:     Generate the R1CS proving key ...........................................17.325s
+··Start:   Generate the R1CS verification key
+··End:     Generate the R1CS verification key ......................................1.488ms
+··Start:   Convert proving key elements to affine
+··End:     Convert proving key elements to affine ..................................633.596ms
+End:     Groth16::Generator ........................................................24.544s
+Start:   timed section
+··Start:   zk sampling
+··End:     zk sampling .............................................................1.291µs
+··Start:   Groth16::Prover
+····Start:   Constraint synthesis
+Number of constraints for Poly 204851, avg 1.9999902368539237
+Number of constraints for FC1 100480 accumulated constraints 305331
+Number of constraints for ReLU1 384 accumulated constraints 305715
+Number of constraints for FC2 1290 accumulated constraints 307005
+Total number of FullCircuit inference constraints 307005
+Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 327155
+····End:     Constraint synthesis ..................................................231.390ms
+····Start:   Inlining LCs
+····End:     Inlining LCs ..........................................................523.368ms
+····Start:   R1CS to QAP witness map
+······Start:   batch product
+······End:     batch product .......................................................7.833ms
+····End:     R1CS to QAP witness map ...............................................1.528s
+····Start:   crypto
+······Start:   Compute C
+········Start:   Base MSM
+········End:     Base MSM ..........................................................5.043s
+········Start:   Base MSM
+········End:     Base MSM ..........................................................2.505s
+······End:     Compute C ...........................................................7.549s
+······Start:   Compute A
+········Start:   MSM size 527359 527359
+··········Start:   Base MSM
+··········End:     Base MSM ........................................................2.489s
+········End:     MSM size 527359 527359 ............................................2.489s
+······End:     Compute A ...........................................................2.490s
+······Start:   Compute B in G1
+········Start:   MSM size 527359 527359
+··········Start:   Base MSM
+··········End:     Base MSM ........................................................268.235ms
+········End:     MSM size 527359 527359 ............................................268.562ms
+······End:     Compute B in G1 .....................................................268.720ms
+······Start:   Compute B in G2
+········Start:   MSM size 527359 527359
+··········Start:   Base MSM
+··········End:     Base MSM ........................................................980.120ms
+········End:     MSM size 527359 527359 ............................................980.473ms
+······End:     Compute B in G2 .....................................................981.434ms
+······Start:   Finish C
+······End:     Finish C ............................................................3.041µs
+····End:     crypto ................................................................11.391s
+··End:     Groth16::Prover .........................................................13.675s
+··Start:   ZKP verification
+1:2, 2:3··End:     ZKP verification ........................................................4.069ms
+··Start:   KZG verification
+····Start:   Checking evaluation
+····End:     Checking evaluation Result: true.......................................3.143ms
+··End:     KZG verification ........................................................3.158ms
+Stats: Stats {
+    bytes_sent: 0,
+    bytes_recv: 0,
+    broadcasts: 0,
+    to_king: 0,
+    from_king: 0,
+}
