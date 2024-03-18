@@ -321,11 +321,14 @@ impl<F: Field> ConstraintSystem<F> {
         // This loop goes through all the LCs in the map, starting from
         // the early ones. The transformer function is applied to the
         // inlined LC, where new witness variables can be created.
+        let trans_lc_time = start_timer!(|| "Transforming LCs");
+    
         for (&index, lc) in &self.lc_map {
             let mut transformed_lc = LinearCombination::new();
 
             // Inline the LC, unwrapping symbolic LCs that may constitute it,
             // and updating them according to transformations in prior iterations.
+            //let lc_timer = start_timer!(|| "Inlining current LC");
             for &(coeff, var) in lc.iter() {
                 if var.is_lc() {
                     let lc_index = var.get_lc_index().expect("should be lc");
@@ -364,7 +367,10 @@ impl<F: Field> ConstraintSystem<F> {
                     // substitute it in directly.
                     transformed_lc.push((coeff, var));
                 }
+
             }
+            //end_timer!(lc_timer);
+            //let lc_trans_timer = start_timer!(|| "Transforming current LC");
             transformed_lc.compactify();
 
             // Call the transformer function.
@@ -373,10 +379,10 @@ impl<F: Field> ConstraintSystem<F> {
 
             // Insert the transformed LC.
             transformed_lc_map.insert(index, transformed_lc);
-
+            //end_timer!(lc_trans_timer);
             // Update the witness counter.
             self.num_witness_variables += num_new_witness_variables;
-
+            //let lc_supply_timer = start_timer!(||"Supplying additional witness assigments");
             // Supply additional witness assignments if not in the
             // setup mode and if new witness variables are created.
             if !self.is_in_setup_mode() && num_new_witness_variables > 0 {
@@ -387,7 +393,9 @@ impl<F: Field> ConstraintSystem<F> {
                         .extend_from_slice(&new_witness_assignments);
                 }
             }
+            //end_timer!(lc_supply_timer);
         }
+        end_timer!(trans_lc_time);
         // Replace the LC map.
         self.lc_map = transformed_lc_map;
     }
