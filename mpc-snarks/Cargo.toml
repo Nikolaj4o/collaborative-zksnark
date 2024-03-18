@@ -44,7 +44,7 @@ mpc-net = { path = "../mpc-net" }
 mpc-trait = { path = "../mpc-trait" }
 mpc-algebra = { path = "../mpc-algebra" }
 mpc-plonk = { path = "../mpc-plonk" }
-zen-arkworks = { path = "../zen-arkworks" }
+zen-arkworks = { path = "../zen-arkworks_mpc" }
 env_logger = "0.8"
 structopt = "0.3"
 clap = "2"

@@ -445,6 +445,164 @@ mod squarings {
         }
     }
 
+    pub mod marlin {
+        use super::*;
+        use ark_marlin::Marlin;
+        use ark_marlin::*;
+        use ark_poly::univariate::DensePolynomial;
+        use ark_poly_commit::marlin::marlin_pc::MarlinKZG10;
+
+        type KzgMarlin<Fr, E> = Marlin<Fr, MarlinKZG10<E, DensePolynomial<Fr>>, Blake2s>;
+
+        pub struct MarlinBench;
+
+        impl SnarkBench for MarlinBench {
+            fn local<E: PairingEngine>(n: usize, timer_label: &str) {
+                let mut rng = &mut test_rng();
+                //let (x, l1_mat, l2_mat): (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) = read_shallownet_inputs_u8();
+                let x: Vec<u8> = read_vector1d("pretrained_model/shallownet/X_q.txt".to_string(), 784); // only read one image
+                let l1_mat: Vec<Vec<u8>> = read_vector2d(
+                    "pretrained_model/shallownet/l1_weight_q.txt".to_string(),
+                    128,
+                    784,
+                );
+                let l2_mat: Vec<Vec<u8>> = read_vector2d(
+                    "pretrained_model/shallownet/l2_weight_q.txt".to_string(),
+                    10,
+                    128,
+                );
+                let x_0: Vec<u8> = read_vector1d("pretrained_model/shallownet/X_z.txt".to_string(), 1);
+                let l1_output_0: Vec<u8> =
+                    read_vector1d("pretrained_model/shallownet/l1_output_z.txt".to_string(), 1);
+                let l2_output_0: Vec<u8> =
+                    read_vector1d("pretrained_model/shallownet/l2_output_z.txt".to_string(), 1);
+                let l1_mat_0: Vec<u8> =
+                    read_vector1d("pretrained_model/shallownet/l1_weight_z.txt".to_string(), 1);
+                let l2_mat_0: Vec<u8> =
+                    read_vector1d("pretrained_model/shallownet/l2_weight_z.txt".to_string(), 1);
+            
+                let l1_mat_multiplier: Vec<f32> = read_vector1d_f32(
+                    "pretrained_model/shallownet/l1_weight_s.txt".to_string(),
+                    128,
+                );
+                let l2_mat_multiplier: Vec<f32> = read_vector1d_f32(
+                    "pretrained_model/shallownet/l2_weight_s.txt".to_string(),
+                    10,
+                );
+            
+                //println!("zero points x_0 {}  l1_out_0 {} l2_out_0 {}, l1_mat_0 {}, l2_mat_0 {}", x_0[0], l1_output_0[0], l2_output_0[0], l1_mat_0[0], l2_mat_0[0]);
+            
+                let z: Vec<u8> = full_circuit_forward_u8(
+                    x.clone(),
+                    l1_mat.clone(),
+                    l2_mat.clone(),
+                    x_0[0],
+                    l1_output_0[0],
+                    l2_output_0[0],
+                    l1_mat_0[0],
+                    l2_mat_0[0],
+                    l1_mat_multiplier.clone(),
+                    l2_mat_multiplier.clone(),
+                );
+            
+                // let end = Instant::now();
+                // println!("commit time {:?}", end.duration_since(begin));
+                let classification_res = argmax_u8(z.clone());
+                let (circ_data, c, pi, pp, beta, rho) = gen_circ_full_kzg_poly::<E>(x, l1_mat, l2_mat, z, classification_res, x_0[0], l1_output_0[0], l2_output_0[0], l1_mat_0[0], l2_mat_0[0], l1_mat_multiplier, l2_mat_multiplier);
+                let srs = KzgMarlin::<E::Fr, E>::universal_setup(1000000, 1000000, 1000000, rng).unwrap();
+
+                let (pk, vk) = KzgMarlin::<E::Fr, E>::index(&srs, circ_data.clone()).unwrap();
+
+                let a = E::Fr::rand(rng);
+                //let circ_data = RepeatedSquaringCircuit::from_start(a, n);
+                let public_inputs = vec![circ_data.powers_of_beta[1], circ_data.rho];
+                let timer = start_timer!(|| "Marlin Proof");
+                let zk_rng = &mut test_rng();
+                let proof = KzgMarlin::<E::Fr, E>::prove(&pk, circ_data, zk_rng).unwrap();
+                end_timer!(timer);
+                assert!(KzgMarlin::<E::Fr, E>::verify(&vk, &public_inputs, &proof, rng).unwrap());
+            }
+
+            fn mpc<E: PairingEngine, S: PairingShare<E>>(n: usize, timer_label: &str) {
+                let mut rng = &mut test_rng();
+                //let (x, l1_mat, l2_mat): (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) = read_shallownet_inputs_u8();
+                let x: Vec<u8> = read_vector1d("pretrained_model/shallownet/X_q.txt".to_string(), 784); // only read one image
+                let l1_mat: Vec<Vec<u8>> = read_vector2d(
+                    "pretrained_model/shallownet/l1_weight_q.txt".to_string(),
+                    128,
+                    784,
+                );
+                let l2_mat: Vec<Vec<u8>> = read_vector2d(
+                    "pretrained_model/shallownet/l2_weight_q.txt".to_string(),
+                    10,
+                    128,
+                );
+                let x_0: Vec<u8> = read_vector1d("pretrained_model/shallownet/X_z.txt".to_string(), 1);
+                let l1_output_0: Vec<u8> =
+                    read_vector1d("pretrained_model/shallownet/l1_output_z.txt".to_string(), 1);
+                let l2_output_0: Vec<u8> =
+                    read_vector1d("pretrained_model/shallownet/l2_output_z.txt".to_string(), 1);
+                let l1_mat_0: Vec<u8> =
+                    read_vector1d("pretrained_model/shallownet/l1_weight_z.txt".to_string(), 1);
+                let l2_mat_0: Vec<u8> =
+                    read_vector1d("pretrained_model/shallownet/l2_weight_z.txt".to_string(), 1);
+            
+                let l1_mat_multiplier: Vec<f32> = read_vector1d_f32(
+                    "pretrained_model/shallownet/l1_weight_s.txt".to_string(),
+                    128,
+                );
+                let l2_mat_multiplier: Vec<f32> = read_vector1d_f32(
+                    "pretrained_model/shallownet/l2_weight_s.txt".to_string(),
+                    10,
+                );
+            
+                //println!("zero points x_0 {}  l1_out_0 {} l2_out_0 {}, l1_mat_0 {}, l2_mat_0 {}", x_0[0], l1_output_0[0], l2_output_0[0], l1_mat_0[0], l2_mat_0[0]);
+            
+                let z: Vec<u8> = full_circuit_forward_u8(
+                    x.clone(),
+                    l1_mat.clone(),
+                    l2_mat.clone(),
+                    x_0[0],
+                    l1_output_0[0],
+                    l2_output_0[0],
+                    l1_mat_0[0],
+                    l2_mat_0[0],
+                    l1_mat_multiplier.clone(),
+                    l2_mat_multiplier.clone(),
+                );
+            
+                // let end = Instant::now();
+                // println!("commit time {:?}", end.duration_since(begin));
+                let classification_res = argmax_u8(z.clone());
+                let (circ_data, c, pi, pp, beta, rho) = gen_circ_full_kzg_poly::<E>(x, l1_mat, l2_mat, z, classification_res, x_0[0], l1_output_0[0], l2_output_0[0], l1_mat_0[0], l2_mat_0[0], l1_mat_multiplier, l2_mat_multiplier);
+                let srs = KzgMarlin::<E::Fr, E>::universal_setup(1000000, 1000000, 1000000, rng).unwrap();
+                let (pk, vk) = KzgMarlin::<E::Fr, E>::index(&srs, circ_data.clone()).unwrap();
+                let mpc_pk = IndexProverKey::from_public(pk);
+
+                let a = E::Fr::rand(rng);
+                let computation_timer = start_timer!(|| "do the mpc (cheat)");
+                let circ_data = gen_circ_full_mpc(circ_data.clone());
+                let public_inputs = vec![circ_data.clone().powers_of_beta[0], circ_data.clone().rho].reveal();
+                end_timer!(computation_timer);
+
+                MpcMultiNet::reset_stats();
+                let timer = start_timer!(|| timer_label);
+                let zk_rng = &mut test_rng();
+                let proof = channel::without_cheating(|| {
+                    KzgMarlin::<
+                        <MpcPairingEngine<E, S> as PairingEngine>::Fr,
+                        MpcPairingEngine<E, S>,
+                    >::prove(&mpc_pk, circ_data, zk_rng)
+                    .unwrap()
+                    .reveal()
+                });
+                end_timer!(timer);
+                assert!(KzgMarlin::<E::Fr, E>::verify(&vk, &public_inputs, &proof, rng).unwrap());
+            }
+        }
+    }
+
+
    
 
     // fn mpc_squaring_circuit<Fr: Field, MFr: Field + Reveal<Base = Fr>>(
@@ -559,6 +717,7 @@ arg_enum! {
     #[derive(PartialEq, Debug, Clone, Copy)]
     pub enum ProofSystem {
         Groth16,
+        Marlin
     }
 }
 
@@ -640,6 +799,12 @@ fn main() {
             opt.computation,
             opt.computation_size,
             squarings::groth::Groth16Bench,
+            TIMED_SECTION_LABEL,
+        ),
+        ProofSystem::Marlin => opt.field.run::<ark_bls12_377::Bls12_377, _>(
+            opt.computation,
+            opt.computation_size,
+            squarings::marlin::MarlinBench,
             TIMED_SECTION_LABEL,
         ),
     }
