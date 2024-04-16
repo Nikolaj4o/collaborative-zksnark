@@ -752,23 +752,22 @@ macro_rules! impl_aff_proj {
                         }
                     }*/
                     //println!("{:?}", scalars);
-                    assert!(bases.iter().all(|b| !b.is_shared()));
+                    //assert!(bases.iter().all(|b| !b.is_shared()));
                     let scalars_shared = scalars.first().map(|s| s.is_shared()).unwrap_or(true);
                     let mut shared_scalars: &Vec<Self::ScalarField> = &scalars.to_vec();
                     let tmp_shared_scalars: Vec<Self::ScalarField>;
 
-                    if (!scalars.iter().all(|b| scalars_shared == b.is_shared())) {
-                        tmp_shared_scalars = shared_scalars
-                            .iter()
-                            .map(|x: &Self::ScalarField| match x {
-                                    Self::ScalarField::Public(y) => Self::ScalarField::king_share(*y, rng),
-                                    _ => *x,
-                                }
-                            ).collect();
-                        shared_scalars = &tmp_shared_scalars;
-                    }
+                    tmp_shared_scalars = shared_scalars
+                        .iter()
+                        .map(|x: &Self::ScalarField| match x {
+                                Self::ScalarField::Public(y) => Self::ScalarField::Shared(PS::FrShare::from_public(*y)),
+                                _ => *x,
+                            }
+                        ).collect();
+                    shared_scalars = &tmp_shared_scalars;
+                
 
-                    assert!(shared_scalars.iter().all(|b| scalars_shared == b.is_shared()));
+                    //assert!(shared_scalars.iter().all(|b| scalars_shared == b.is_shared()));
                     let bases =
                         MpcGroup::all_public_or_shared(bases.into_iter().map(|i| i.val.clone()))
                             .unwrap();

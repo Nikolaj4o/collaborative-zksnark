@@ -21,6 +21,18 @@ fn test_fr() {
 }
 
 #[test]
+fn test_fr() {
+    let mut rng = ark_std::test_rng();
+    for _ in 0..ITERATIONS {
+        let a: Fr = UniformRand::rand(&mut rng);
+        let b: Fr = UniformRand::rand(&mut rng);
+        field_test(a, b);
+        primefield_test::<Fr>();
+        sqrt_field_test(b);
+    }
+}
+
+#[test]
 fn test_fq() {
     let mut rng = ark_std::test_rng();
     for _ in 0..ITERATIONS {

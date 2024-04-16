@@ -40,6 +40,8 @@ trait SnarkBench {
 }
 
 mod squarings {
+    use mpc_algebra::{FieldShare, MpcField};
+
     use super::*;
     const M_EXP: u32 = 22;
     fn kzg_proof<F: PrimeField, E: PairingEngine<Fr = F>>(
@@ -220,40 +222,40 @@ mod squarings {
         (full_circuit, c, pi, pp, beta, rho)
     }
 
-    fn gen_circ_full_mpc<F: PrimeField, MF: PrimeField + Reveal<Base = F>>(    
+    fn gen_circ_full_mpc<F: PrimeField, S: FieldShare<F>>(    
         full_circuit: FullCircuitOpLv3KZGPolyClassification<F>
-    ) -> FullCircuitOpLv3KZGPolyClassification<MF> {
+    ) -> FullCircuitOpLv3KZGPolyClassification<MpcField<F, S>> {
 
         let rng = &mut test_rng();
 
         let full_circuit_mpc = FullCircuitOpLv3KZGPolyClassification {
-            x: MF::king_share_batch(full_circuit.x, rng),
-            l1: Vec::<MF>::king_share_batch(full_circuit.l1, rng),
-            l2: Vec::<MF>::king_share_batch(full_circuit.l2, rng),
-            y: MF::king_share_batch(full_circuit.y, rng),
-            z: MF::king_share_batch(full_circuit.z, rng),
-            argmax_res: MF::king_share(full_circuit.argmax_res, rng),
-            relu_output1: MF::king_share_batch(full_circuit.relu_output1, rng),
-            remainder1: MF::king_share_batch(full_circuit.remainder1, rng),
-            remainder2: MF::king_share_batch(full_circuit.remainder2, rng),
-            div1: MF::king_share_batch(full_circuit.div1, rng),
-            div2: MF::king_share_batch(full_circuit.div2, rng),
-            cmp_res: bool::king_share_batch(full_circuit.cmp_res, rng),
-            y_0_converted: MF::king_share_batch(full_circuit.y_0_converted, rng),
-            z_0_converted: MF::king_share_batch(full_circuit.z_0_converted, rng),
-            x_0: MF::king_share(full_circuit.x_0, rng),
-            y_0: MF::king_share(full_circuit.y_0, rng),
-            z_0: MF::king_share(full_circuit.z_0, rng),
-            l1_mat_0: MF::king_share(full_circuit.l1_mat_0, rng),
-            l2_mat_0: MF::king_share(full_circuit.l2_mat_0, rng),
-            multiplier_l1: MF::king_share_batch(full_circuit.multiplier_l1, rng),
-            multiplier_l2: MF::king_share_batch(full_circuit.multiplier_l2, rng),
-            two_power_8: MF::king_share(full_circuit.two_power_8, rng),
-            m_exp: MF::king_share(full_circuit.m_exp, rng),
-            zero: MF::king_share(full_circuit.zero, rng),
+            x: full_circuit.x.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect(),
+            l1: full_circuit.l1.iter().map(|x| x.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect()).collect(),
+            l2: full_circuit.l2.iter().map(|x| x.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect()).collect(),
+            y: full_circuit.y.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect(),
+            z: full_circuit.z.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect(),
+            argmax_res: MpcField::<F, S>::from_add_shared(full_circuit.argmax_res),
+            relu_output1: full_circuit.relu_output1.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect(),
+            remainder1: full_circuit.remainder1.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect(),
+            remainder2: full_circuit.remainder2.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect(),
+            div1: full_circuit.div1.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect(),
+            div2: full_circuit.div2.iter().map(|x| MpcField::<F, S>::from_add_shared(*x)).collect(),
+            cmp_res: full_circuit.cmp_res.clone(),
+            y_0_converted: full_circuit.y_0_converted.iter().map(|x| MpcField::<F, S>::from_public(*x)).collect(),
+            z_0_converted: full_circuit.z_0_converted.iter().map(|x| MpcField::<F, S>::from_public(*x)).collect(),
+            x_0: MpcField::<F, S>::from_public(full_circuit.x_0),
+            y_0: MpcField::<F, S>::from_public(full_circuit.y_0),
+            z_0: MpcField::<F, S>::from_public(full_circuit.z_0),
+            l1_mat_0: MpcField::<F, S>::from_public(full_circuit.l1_mat_0),
+            l2_mat_0: MpcField::<F, S>::from_public(full_circuit.l2_mat_0),
+            multiplier_l1: full_circuit.multiplier_l1.iter().map(|x| MpcField::<F, S>::from_public(*x)).collect(),
+            multiplier_l2: full_circuit.multiplier_l2.iter().map(|x| MpcField::<F, S>::from_public(*x)).collect(),
+            two_power_8: MpcField::<F, S>::from_public(full_circuit.two_power_8),
+            m_exp: MpcField::<F, S>::from_public(full_circuit.m_exp),
+            zero: MpcField::<F, S>::from_public(full_circuit.zero),
 
-            powers_of_beta: MF::king_share_batch(full_circuit.powers_of_beta.clone(), rng),
-            rho: MF::king_share(full_circuit.rho.clone(), rng),
+            powers_of_beta: full_circuit.powers_of_beta.iter().map(|x| MpcField::<F, S>::from_public(*x)).collect(),
+            rho: MpcField::<F, S>::from_public(full_circuit.rho.clone()),
         };
         full_circuit_mpc
     }
@@ -601,51 +603,6 @@ mod squarings {
             }
         }
     }
-
-
-   
-
-    // fn mpc_squaring_circuit<Fr: Field, MFr: Field + Reveal<Base = Fr>>(
-    //     start: Fr,
-    //     squarings: usize,
-    // ) -> RepeatedSquaringCircuit<MFr> {
-    //     let raw_chain: Vec<Fr> = std::iter::successors(Some(start), |a| Some(a.square()))
-    //         .take(squarings + 1)
-    //         .collect();
-    //     let rng = &mut test_rng();
-    //     let chain_shares = MFr::king_share_batch(raw_chain, rng);
-    //     RepeatedSquaringCircuit {
-    //         chain: chain_shares.into_iter().map(Some).collect(),
-    //     }
-    // }
-
-    // impl<ConstraintF: Field> ConstraintSynthesizer<ConstraintF>
-    //     for RepeatedSquaringCircuit<ConstraintF>
-    // {
-    //     fn generate_constraints(
-    //         self,
-    //         cs: ConstraintSystemRef<ConstraintF>,
-    //     ) -> Result<(), SynthesisError> {
-    //         let mut vars: Vec<Variable> = self
-    //             .chain
-    //             .iter()
-    //             .take(self.squarings())
-    //             .map(|o| cs.new_witness_variable(|| o.ok_or(SynthesisError::AssignmentMissing)))
-    //             .collect::<Result<_, _>>()?;
-    //         vars.push(cs.new_input_variable(|| {
-    //             self.chain
-    //                 .last()
-    //                 .unwrap()
-    //                 .ok_or(SynthesisError::AssignmentMissing)
-    //         })?);
-
-    //         for i in 0..self.squarings() {
-    //             cs.enforce_constraint(lc!() + vars[i], lc!() + vars[i], lc!() + vars[i + 1])?;
-    //         }
-
-    //         Ok(())
-    //     }
-    // }
 }
 
 #[derive(Debug, StructOpt)]

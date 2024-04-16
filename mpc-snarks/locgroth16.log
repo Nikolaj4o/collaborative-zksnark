@@ -1,150 +1,150 @@
 Start:   KZG10::Setup with degree 102425
 ··Start:   Generating powers of G
-··End:     Generating powers of G ..................................................1.966s
+··End:     Generating powers of G ..................................................1.232s
 ··Start:   Generating powers of gamma * G
-··End:     Generating powers of gamma * G ..........................................1.969s
+··End:     Generating powers of gamma * G ..........................................1.231s
 ··Start:   Generating negative powers of h in G2
-··End:     Generating negative powers of h in G2 ...................................6.789s
-End:     KZG10::Setup with degree 102425 ...........................................10.866s
+··End:     Generating negative powers of h in G2 ...................................5.086s
+End:     KZG10::Setup with degree 102425 ...........................................7.613s
 Start:   Committing to polynomial of degree 102425 with hiding_bound: None
 ··Start:   MSM to compute commitment to plaintext poly
 ····Start:   Base MSM
-····End:     Base MSM ..............................................................88.452ms
-··End:     MSM to compute commitment to plaintext poly .............................88.468ms
+····End:     Base MSM ..............................................................61.486ms
+··End:     MSM to compute commitment to plaintext poly .............................61.613ms
 ··Start:   MSM to compute commitment to random poly
 ····Start:   Base MSM
-····End:     Base MSM ..............................................................28.691µs
-··End:     MSM to compute commitment to random poly ................................34.453µs
-End:     Committing to polynomial of degree 102425 with hiding_bound: None .........88.515ms
+····End:     Base MSM ..............................................................15.916µs
+··End:     MSM to compute commitment to random poly ................................22.667µs
+End:     Committing to polynomial of degree 102425 with hiding_bound: None .........61.652ms
 Start:   Committing to polynomial of degree 102424 with hiding_bound: None
 ··Start:   MSM to compute commitment to plaintext poly
 ····Start:   Base MSM
-····End:     Base MSM ..............................................................1.693s
-··End:     MSM to compute commitment to plaintext poly .............................1.693s
+····End:     Base MSM ..............................................................1.217s
+··End:     MSM to compute commitment to plaintext poly .............................1.218s
 ··Start:   MSM to compute commitment to random poly
 ····Start:   Base MSM
-····End:     Base MSM ..............................................................28.873µs
-··End:     MSM to compute commitment to random poly ................................34.838µs
-End:     Committing to polynomial of degree 102424 with hiding_bound: None .........1.693s
+····End:     Base MSM ..............................................................16.083µs
+··End:     MSM to compute commitment to random poly ................................23.250µs
+End:     Committing to polynomial of degree 102424 with hiding_bound: None .........1.218s
 Start:   Groth16::Generator
 ··Start:   Constraint synthesis
 ····Start:   Poly constraints
-····End:     Poly constraints ......................................................199.695ms
+····End:     Poly constraints ......................................................85.120ms
 Number of constraints for Poly 204851, avg 1.9999902368539237
 ····Start:   FC constraints
 ······Start:   L1 constraints
 Number of constraints for FC1 100480 accumulated constraints 305331
-······End:     L1 constraints ......................................................250.631ms
+······End:     L1 constraints ......................................................112.049ms
 ······Start:   ReLU constraints
 Number of constraints for ReLU1 384 accumulated constraints 305715
-······End:     ReLU constraints ....................................................245.808µs
+······End:     ReLU constraints ....................................................296.375µs
 ······Start:   L2 constraints
 Number of constraints for FC2 1290 accumulated constraints 307005
-······End:     L2 constraints ......................................................2.036ms
+······End:     L2 constraints ......................................................1.702ms
 Total number of FullCircuit inference constraints 307005
-····End:     FC constraints ........................................................261.323ms
+····End:     FC constraints ........................................................116.978ms
 ····Start:   ArgMax constraints
 Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 327155
-····End:     ArgMax constraints ....................................................21.288ms
-··End:     Constraint synthesis ....................................................490.861ms
+····End:     ArgMax constraints ....................................................14.493ms
+··End:     Constraint synthesis ....................................................222.916ms
 ··Start:   Inlining LCs
 ····Start:   Transforming LCs
-····End:     Transforming LCs ......................................................598.692ms
-··End:     Inlining LCs ............................................................832.143ms
+····End:     Transforming LCs ......................................................349.268ms
+··End:     Inlining LCs ............................................................543.851ms
 ··Start:   Constructing evaluation domain
-··End:     Constructing evaluation domain ..........................................18.694µs
+··End:     Constructing evaluation domain ..........................................15.833µs
 ··Start:   R1CS to QAP Instance Map with Evaluation
 ····Start:   Evaluate Lagrange coefficients
-····End:     Evaluate Lagrange coefficients ........................................89.303ms
-··End:     R1CS to QAP Instance Map with Evaluation ................................628.770ms
+····End:     Evaluate Lagrange coefficients ........................................58.674ms
+··End:     R1CS to QAP Instance Map with Evaluation ................................421.835ms
 ··Start:   Compute G2 table
-··End:     Compute G2 table ........................................................244.290ms
+··End:     Compute G2 table ........................................................180.874ms
 ··Start:   Calculate B G2
-··End:     Calculate B G2 ..........................................................7.068s
+··End:     Calculate B G2 ..........................................................5.019s
 ··Start:   Compute G1 window table
-··End:     Compute G1 window table .................................................428.512ms
+··End:     Compute G1 window table .................................................272.382ms
 ··Start:   Generate the R1CS proving key
 ····Start:   Calculate A
-····End:     Calculate A ...........................................................6.401s
+····End:     Calculate A ...........................................................4.237s
 ····Start:   Calculate B G1
-····End:     Calculate B G1 ........................................................2.214s
+····End:     Calculate B G1 ........................................................1.400s
 ····Start:   Calculate H
-····End:     Calculate H ...........................................................8.665s
+····End:     Calculate H ...........................................................5.641s
 ····Start:   Calculate L
-····End:     Calculate L ...........................................................8.297s
-··End:     Generate the R1CS proving key ...........................................25.581s
+····End:     Calculate L ...........................................................5.316s
+··End:     Generate the R1CS proving key ...........................................16.598s
 ··Start:   Generate the R1CS verification key
-··End:     Generate the R1CS verification key ......................................875.606µs
+··End:     Generate the R1CS verification key ......................................3.480ms
 ··Start:   Convert proving key elements to affine
-··End:     Convert proving key elements to affine ..................................1.444s
-End:     Groth16::Generator ........................................................36.770s
+··End:     Convert proving key elements to affine ..................................638.455ms
+End:     Groth16::Generator ........................................................23.939s
 Start:   timed section
 ··Start:   zk sampling
-··End:     zk sampling .............................................................980ns
+··End:     zk sampling .............................................................1.417µs
 ··Start:   Groth16::Prover
 ····Start:   Constraint synthesis
 ······Start:   Poly constraints
-······End:     Poly constraints ....................................................119.173ms
+······End:     Poly constraints ....................................................88.563ms
 Number of constraints for Poly 204851, avg 1.9999902368539237
 ······Start:   FC constraints
 ········Start:   L1 constraints
 Number of constraints for FC1 100480 accumulated constraints 305331
-········End:     L1 constraints ....................................................165.880ms
+········End:     L1 constraints ....................................................118.293ms
 ········Start:   ReLU constraints
 Number of constraints for ReLU1 384 accumulated constraints 305715
-········End:     ReLU constraints ..................................................237.660µs
+········End:     ReLU constraints ..................................................197.875µs
 ········Start:   L2 constraints
 Number of constraints for FC2 1290 accumulated constraints 307005
-········End:     L2 constraints ....................................................2.069ms
+········End:     L2 constraints ....................................................1.707ms
 Total number of FullCircuit inference constraints 307005
-······End:     FC constraints ......................................................171.340ms
+······End:     FC constraints ......................................................123.113ms
 ······Start:   ArgMax constraints
 Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 327155
-······End:     ArgMax constraints ..................................................21.008ms
-····End:     Constraint synthesis ..................................................321.361ms
+······End:     ArgMax constraints ..................................................15.301ms
+····End:     Constraint synthesis ..................................................232.832ms
 ····Start:   Inlining LCs
 ······Start:   Transforming LCs
-······End:     Transforming LCs ....................................................624.605ms
-····End:     Inlining LCs ..........................................................857.253ms
+······End:     Transforming LCs ....................................................354.061ms
+····End:     Inlining LCs ..........................................................564.540ms
 ····Start:   R1CS to QAP witness map
 ······Start:   batch product
-······End:     batch product .......................................................13.968ms
-····End:     R1CS to QAP witness map ...............................................2.274s
+······End:     batch product .......................................................7.869ms
+····End:     R1CS to QAP witness map ...............................................1.524s
 ····Start:   crypto
 ······Start:   Compute C
 ········Start:   Base MSM
-········End:     Base MSM ..........................................................7.488s
+········End:     Base MSM ..........................................................4.911s
 ········Start:   Base MSM
-········End:     Base MSM ..........................................................3.789s
-······End:     Compute C ...........................................................11.278s
+········End:     Base MSM ..........................................................2.619s
+······End:     Compute C ...........................................................7.532s
 ······Start:   Compute A
 ········Start:   MSM size 527359 527359
 ··········Start:   Base MSM
-··········End:     Base MSM ........................................................3.709s
-········End:     MSM size 527359 527359 ............................................3.709s
-······End:     Compute A ...........................................................3.709s
+··········End:     Base MSM ........................................................2.610s
+········End:     MSM size 527359 527359 ............................................2.611s
+······End:     Compute A ...........................................................2.612s
 ······Start:   Compute B in G1
 ········Start:   MSM size 527359 527359
 ··········Start:   Base MSM
-··········End:     Base MSM ........................................................432.842ms
-········End:     MSM size 527359 527359 ............................................432.868ms
-······End:     Compute B in G1 .....................................................433.072ms
+··········End:     Base MSM ........................................................273.402ms
+········End:     MSM size 527359 527359 ............................................273.784ms
+······End:     Compute B in G1 .....................................................273.948ms
 ······Start:   Compute B in G2
 ········Start:   MSM size 527359 527359
 ··········Start:   Base MSM
-··········End:     Base MSM ........................................................1.368s
-········End:     MSM size 527359 527359 ............................................1.368s
-······End:     Compute B in G2 .....................................................1.369s
+··········End:     Base MSM ........................................................989.420ms
+········End:     MSM size 527359 527359 ............................................989.767ms
+······End:     Compute B in G2 .....................................................990.760ms
 ······Start:   Finish C
-······End:     Finish C ............................................................4.080µs
-····End:     crypto ................................................................16.916s
-··End:     Groth16::Prover .........................................................20.370s
+······End:     Finish C ............................................................2.791µs
+····End:     crypto ................................................................11.524s
+··End:     Groth16::Prover .........................................................13.845s
 ··Start:   ZKP verification
-1:2, 2:3··End:     ZKP verification ........................................................5.315ms
+1:2, 2:3··End:     ZKP verification ........................................................4.047ms
 ··Start:   KZG verification
 ····Start:   Checking evaluation
-····End:     Checking evaluation Result: true.......................................4.234ms
-··End:     KZG verification ........................................................4.245ms
+····End:     Checking evaluation Result: true.......................................3.175ms
+··End:     KZG verification ........................................................3.207ms
 Stats: Stats {
     bytes_sent: 0,
     bytes_recv: 0,

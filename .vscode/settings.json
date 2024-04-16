@@ -1,0 +1,7 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./mpc-algebra/Cargo.toml",
+        "./mpc-algebra/Cargo.toml"
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false
+}

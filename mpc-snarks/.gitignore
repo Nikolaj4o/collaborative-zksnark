@@ -4,3 +4,4 @@ hosts
 vms
 benches
 bin
+.log

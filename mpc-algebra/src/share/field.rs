@@ -9,6 +9,7 @@ use core::ops::*;
 use std::cmp::Ord;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
+use std::usize;
 
 use super::BeaverSource;
 use crate::Reveal;
@@ -180,6 +181,14 @@ pub trait FieldShare<F: Field>:
         debug_assert!(mxm_pub.len() == n);
         mms_inv
     }
+
+    // fn truncate(self, m: usize) -> Self {
+    //     let &mut rng = ark_std::test_rng();
+    //     let k = Self::MODULUS_BITS;
+    //     let r: Vec<Self> = vec![false; k - m].iter().map(|_| Self::from_add_shared(bool::rand(rng).into()));
+    //     let r_p: Vec<Self> = vec![false; m].iter().map(|_| Self::from_add_shared(bool::rand(rng).into()));
+
+    // }
 
     fn univariate_div_qr<'a>(
         _num: DenseOrSparsePolynomial<Self>,

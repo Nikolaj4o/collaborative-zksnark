@@ -2,6 +2,7 @@
 #![feature(associated_type_defaults)]
 
 pub mod reveal;
+pub mod bin;
 pub use reveal::*;
 pub mod channel;
 pub mod com;

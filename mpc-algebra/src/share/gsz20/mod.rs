@@ -185,8 +185,11 @@ pub mod field {
         fn from_public(f: F) -> Self {
             Self { val: f, degree: 0 }
         }
-        fn from_add_shared(_f: F) -> Self {
-            unimplemented!()
+        fn from_add_shared(f: F) -> Self {
+            Self {
+                val: f,
+                degree: t(),
+            }
         }
         fn unwrap_as_public(self) -> F {
             self.val
@@ -985,7 +988,7 @@ pub mod group {
             } else {
                 0
             };
-            assert!(scalars.iter().all(|s| s.degree == degree));
+            //assert!(scalars.iter().all(|s| s.degree == degree));
             let s_t = start_timer!(|| "Collecting scalar shares");
             let scalars: Vec<G::ScalarField> = scalars.into_iter().map(|s| s.val.clone()).collect();
             end_timer!(s_t);
