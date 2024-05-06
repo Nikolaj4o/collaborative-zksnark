@@ -1,0 +1,116 @@
+Start:   Preprocessing
+lenet vallina forward
+End:     Preprocessing .............................................................84.185ms
+Start:   Groth16::Generator
+··Start:   Constraint synthesis
+we don't use old SIMD
+Conv1 357504 357504
+Relu1 6326880 6684384
+AvgPool1 1176 6685560
+we don't use old SIMD
+Conv2 241600 6927160
+Relu2 2152000 9079160
+AvgPool2 400 9079560
+we don't use old SIMD
+Conv3 123360 9202920
+Relu3 645600 9848520
+FC1 40404 9888924
+Relu4 112980 10001904
+FC2 850 10002754
+Commit 155603
+Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 10178507
+FullCircuit 10178507
+··End:     Constraint synthesis ....................................................8.202s
+··Start:   Inlining LCs
+····Start:   Transforming LCs
+····End:     Transforming LCs ......................................................9.478s
+··End:     Inlining LCs ............................................................18.823s
+··Start:   Constructing evaluation domain
+··End:     Constructing evaluation domain ..........................................17.791µs
+··Start:   R1CS to QAP Instance Map with Evaluation
+····Start:   Evaluate Lagrange coefficients
+····End:     Evaluate Lagrange coefficients ........................................2.130s
+··End:     R1CS to QAP Instance Map with Evaluation ................................26.127s
+··Start:   Compute G2 table
+··End:     Compute G2 table ........................................................2.049s
+··Start:   Calculate B G2
+··End:     Calculate B G2 ..........................................................143.916s
+··Start:   Compute G1 window table
+··End:     Compute G1 window table .................................................1.748s
+··Start:   Generate the R1CS proving key
+····Start:   Calculate A
+····End:     Calculate A ...........................................................78.916s
+····Start:   Calculate B G1
+····End:     Calculate B G1 ........................................................42.826s
+····Start:   Calculate H
+····End:     Calculate H ...........................................................170.380s
+····Start:   Calculate L
+····End:     Calculate L ...........................................................83.333s
+··End:     Generate the R1CS proving key ...........................................375.463s
+··Start:   Generate the R1CS verification key
+··End:     Generate the R1CS verification key ......................................33.370ms
+··Start:   Convert proving key elements to affine
+··End:     Convert proving key elements to affine ..................................43.302s
+End:     Groth16::Generator ........................................................620.415s
+Start:   timed section
+··Start:   zk sampling
+··End:     zk sampling .............................................................1.500µs
+··Start:   Groth16::Prover
+····Start:   Constraint synthesis
+we don't use old SIMD
+Conv1 357504 357504
+Relu1 6326880 6684384
+AvgPool1 1176 6685560
+we don't use old SIMD
+Conv2 241600 6927160
+Relu2 2152000 9079160
+AvgPool2 400 9079560
+we don't use old SIMD
+Conv3 123360 9202920
+Relu3 645600 9848520
+FC1 40404 9888924
+Relu4 112980 10001904
+FC2 850 10002754
+Commit 155603
+Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 10178507
+FullCircuit 10178507
+····End:     Constraint synthesis ..................................................8.073s
+····Start:   Inlining LCs
+······Start:   Transforming LCs
+······End:     Transforming LCs ....................................................10.385s
+····End:     Inlining LCs ..........................................................19.182s
+····Start:   R1CS to QAP witness map
+······Start:   batch product
+······End:     batch product .......................................................291.138ms
+····End:     R1CS to QAP witness map ...............................................79.629s
+····Start:   crypto
+······Start:   Compute C
+········Start:   Base MSM
+········End:     Base MSM ..........................................................148.647s
+········Start:   Base MSM
+········End:     Base MSM ..........................................................5.360s
+······End:     Compute C ...........................................................154.021s
+······Start:   Compute A
+········Start:   MSM size 8590673 8590673
+··········Start:   Base MSM
+··········End:     Base MSM ........................................................7.166s
+········End:     MSM size 8590673 8590673 ..........................................7.170s
+······End:     Compute A ...........................................................7.170s
+······Start:   Compute B in G1
+········Start:   MSM size 8590673 8590673
+··········Start:   Base MSM
+··········End:     Base MSM ........................................................3.269s
+········End:     MSM size 8590673 8590673 ..........................................3.272s
+······End:     Compute B in G1 .....................................................3.273s
+······Start:   Compute B in G2
+········Start:   MSM size 8590673 8590673
+··········Start:   Base MSM
+··········End:     Base MSM ........................................................8.276s
+········End:     MSM size 8590673 8590673 ..........................................8.282s
+······End:     Compute B in G2 .....................................................8.287s
+······Start:   Finish C
+······End:     Finish C ............................................................3.625µs
+····End:     crypto ................................................................178.028s
+··End:     Groth16::Prover .........................................................284.914s
+··Start:   ZKP verification
+1:2, 2:3085

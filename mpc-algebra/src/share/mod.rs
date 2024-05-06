@@ -16,6 +16,7 @@ use std::marker::PhantomData;
 use derivative::Derivative;
 
 pub trait BeaverSource<A, B, C>: Clone {
+    fn nbit_val(&mut self, n: u32) -> B;
     fn triple(&mut self) -> (A, B, C);
     fn triples(&mut self, n: usize) -> (Vec<A>, Vec<B>, Vec<C>) {
         let mut xs = Vec::new();
@@ -51,6 +52,10 @@ pub type PanicFieldTripleSource<F> = PanicBeaverSource<F, F, F>;
 pub type PanicGroupTripleSource<F, G> = PanicBeaverSource<G, F, G>;
 
 impl<A, B, C> BeaverSource<A, B, C> for PanicBeaverSource<A, B, C> {
+    fn nbit_val(&mut self, n: u32) -> B {
+        panic!("PanicBeaverSource")
+    }
+
     fn triple(&mut self) -> (A, B, C) {
         panic!("PanicBeaverSource")
     }

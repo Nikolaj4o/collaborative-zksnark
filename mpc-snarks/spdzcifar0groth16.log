@@ -1,0 +1,84 @@
+Start:   Connecting
+End:     Connecting ................................................................16.701ms
+Start:   Preprocessing
+lenet vallina forward
+··Start:   Groth16::Generator
+····Start:   Constraint synthesis
+we don't use old SIMD
+Conv1 357504 357504
+Relu1 6326880 6684384
+AvgPool1 1176 6685560
+we don't use old SIMD
+Conv2 241600 6927160
+Relu2 2152000 9079160
+AvgPool2 400 9079560
+we don't use old SIMD
+Conv3 123360 9202920
+Relu3 645600 9848520
+FC1 40404 9888924
+Relu4 112980 10001904
+FC2 850 10002754
+Commit 155603
+Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 10178507
+FullCircuit 10178507
+····End:     Constraint synthesis ..................................................8.460s
+····Start:   Inlining LCs
+······Start:   Transforming LCs
+······End:     Transforming LCs ....................................................12.225s
+····End:     Inlining LCs ..........................................................24.495s
+····Start:   Constructing evaluation domain
+····End:     Constructing evaluation domain ........................................16.292µs
+····Start:   R1CS to QAP Instance Map with Evaluation
+······Start:   Evaluate Lagrange coefficients
+······End:     Evaluate Lagrange coefficients ......................................2.391s
+····End:     R1CS to QAP Instance Map with Evaluation ..............................36.860s
+····Start:   Compute G2 table
+····End:     Compute G2 table ......................................................2.094s
+····Start:   Calculate B G2
+····End:     Calculate B G2 ........................................................145.588s
+····Start:   Compute G1 window table
+····End:     Compute G1 window table ...............................................1.803s
+····Start:   Generate the R1CS proving key
+······Start:   Calculate A
+······End:     Calculate A .........................................................80.988s
+······Start:   Calculate B G1
+······End:     Calculate B G1 ......................................................44.201s
+······Start:   Calculate H
+······End:     Calculate H .........................................................176.354s
+······Start:   Calculate L
+······End:     Calculate L .........................................................84.037s
+····End:     Generate the R1CS proving key .........................................385.586s
+····Start:   Generate the R1CS verification key
+····End:     Generate the R1CS verification key ....................................35.522ms
+····Start:   Convert proving key elements to affine
+····End:     Convert proving key elements to affine ................................70.468s
+··End:     Groth16::Generator ......................................................676.140s
+··Start:   MPC Proof
+····Start:   Preprocessing
+lenet vallina forward
+····End:     Preprocessing .........................................................171.096s
+····Start:   timed section
+······Start:   zk sampling
+······End:     zk sampling .........................................................1.709µs
+······Start:   Groth16::Prover
+········Start:   Constraint synthesis
+we don't use old SIMD
+Conv1 357504 357504
+Relu1 6326880 6684384
+AvgPool1 1176 6685560
+we don't use old SIMD
+Conv2 241600 6927160
+Relu2 2152000 9079160
+AvgPool2 400 9079560
+we don't use old SIMD
+Conv3 123360 9202920
+Relu3 645600 9848520
+FC1 40404 9888924
+Relu4 112980 10001904
+FC2 850 10002754
+Commit 155603
+Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 10178507
+FullCircuit 10178507
+········End:     Constraint synthesis ..............................................3282.356s
+········Start:   Inlining LCs
+··········Start:   Transforming LCs

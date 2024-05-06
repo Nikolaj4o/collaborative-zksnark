@@ -20,7 +20,7 @@ use ark_std::{
 use mpc_trait::MpcWire;
 
 pub use ark_ff_macros;
-use num_traits::{One, Zero};
+use num_traits::{One, Pow, Zero};
 use zeroize::Zeroize;
 
 #[macro_use]
@@ -125,7 +125,6 @@ pub trait Field:
     + MpcWire
 {
     type BasePrimeField: PrimeField;
-
     /// Returns the characteristic of the field,
     /// in little-endian representation.
     fn characteristic<'a>() -> &'a [u64] {
@@ -139,7 +138,6 @@ pub trait Field:
     /// Convert a slice of base prime field elements into a field element.
     /// If the slice length != Self::extension_degree(), must return None.
     fn from_base_prime_field_elems(elems: &[Self::BasePrimeField]) -> Option<Self>;
-
     /// Returns `self + self`.
     #[must_use]
     fn double(&self) -> Self;
@@ -395,7 +393,7 @@ pub trait PrimeField:
 {
     type Params: FpParameters<BigInt = Self::BigInt>;
     type BigInt: BigInteger;
-
+    
     /// Returns a prime field element from its underlying representation.
     fn from_repr(repr: Self::BigInt) -> Option<Self>;
 
@@ -407,6 +405,27 @@ pub trait PrimeField:
     /// Returns the underlying representation of the prime field element.
     fn into_repr(&self) -> Self::BigInt;
 
+    fn bit_decomp(&self) -> Vec<bool> {
+        let bits: Vec<bool> = BitIteratorBE::new(self.into_repr()).map(|b| b).collect();
+        bits
+    }
+    
+    fn trunc (&self, bits: u32) -> Self {
+        let mut repr = self.into_repr();
+        let truncval = 2u32.pow(bits).into();
+        repr.divn(truncval);
+        Self::from_repr(repr).unwrap()
+    }
+
+    fn modulo (&self, bits: u32) -> Self {
+        let val = 2u32.pow(bits);
+        let mut repr = self.into_repr();
+        let mut repr_init = repr;
+        repr.divn(val);
+        repr.muln(val);
+        repr_init.sub_noborrow(&repr);
+        Self::from_repr(repr_init).unwrap()
+    }
     /// Reads bytes in big-endian, and converts them to a field element.
     /// If the bytes are larger than the modulus, it will reduce them.
     fn from_be_bytes_mod_order(bytes: &[u8]) -> Self {

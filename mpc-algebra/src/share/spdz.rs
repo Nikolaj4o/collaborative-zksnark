@@ -374,17 +374,31 @@ macro_rules! impl_spdz_basics_2_param {
                 unimplemented!("deserialize_with_flags")
             }
         }
+    };
+}
+macro_rules! impl_spdz_rand {
+    ($share:ident, $bound:ident) => {
+        impl<T: $bound, M> UniformRand for $share<T, M> {
+            fn rand<R: Rng + ?Sized>(_rng: &mut R) -> Self {
+                //todo!()
+                Self::from_add_shared(T::rand(_rng))
+            }
+        }
+    };
+}
+macro_rules! impl_spdz_rand_todo {
+    ($share:ident, $bound:ident) => {
         impl<T: $bound, M> UniformRand for $share<T, M> {
             fn rand<R: Rng + ?Sized>(_rng: &mut R) -> Self {
                 todo!()
-                //Self::from_add_shared(<T as UniformRand>::rand(rng))
+                //Self::from_add_shared(T::Base::rand(_rng))
             }
         }
     };
 }
 
 impl_spdz_basics_2_param!(SpdzGroupShare, Group);
-
+impl_spdz_rand!(SpdzGroupShare, Group);
 impl<G: Group, M: Msm<G, G::ScalarField>> GroupShare<G> for SpdzGroupShare<G, M> {
     type FieldShare = SpdzFieldShare<G::ScalarField>;
 
@@ -460,14 +474,13 @@ impl<G: Group, M: Msm<G, G::ScalarField>> GroupShare<G> for SpdzGroupShare<G, M>
     Eq(bound = "T: Eq"),
     PartialOrd(bound = "T: PartialOrd"),
     Ord(bound = "T: Ord"),
-    Hash(bound = "T: Hash")
+    Hash(bound = "T: Hash"),
 )]
 pub struct SpdzMulFieldShare<T, S> {
     sh: MulFieldShare<T>,
     mac: MulFieldShare<T>,
     _phants: PhantomData<S>,
 }
-impl_spdz_basics_2_param!(SpdzMulFieldShare, Field);
 
 impl<F: Field, S: PrimeField> Reveal for SpdzMulFieldShare<F, S> {
     type Base = F;
@@ -498,6 +511,8 @@ impl<F: Field, S: PrimeField> Reveal for SpdzMulFieldShare<F, S> {
     }
 }
 
+impl_spdz_basics_2_param!(SpdzMulFieldShare, Field);
+impl_spdz_rand_todo!(SpdzMulFieldShare, Field);
 impl<F: Field, S: PrimeField> FieldShare<F> for SpdzMulFieldShare<F, S> {
     fn add(&mut self, _other: &Self) -> &mut Self {
         unimplemented!("add for SpdzMulFieldShare")

@@ -11,27 +11,27 @@ use core::cmp::Ordering;
 
 //used in ORL face recognition problem
 #[derive(Debug, Clone)]
-pub struct CosineSimilarityCircuitU8 {
-    pub vec1: Vec<u8>,
-    pub vec2: Vec<u8>,
-    pub threshold: u8,
+pub struct CosineSimilarityCircuitU8<F: PrimeField> {
+    pub vec1: Vec<F>,
+    pub vec2: Vec<F>,
+    pub threshold: F,
     pub result: bool,
 }
 
-impl ConstraintSynthesizer<Fq> for CosineSimilarityCircuitU8 {
-    fn generate_constraints(self, cs: ConstraintSystemRef<Fq>) -> Result<(), SynthesisError> {
+impl <F: PrimeField> ConstraintSynthesizer<F> for CosineSimilarityCircuitU8<F> {
+    fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
         let _cir_number = cs.num_constraints();
 
-        let res = Boolean::<Fq>::constant(self.result);
+        let res = Boolean::<F>::constant(self.result);
 
-        let norm1 = scala_cs_helper_u8(cs.clone(), &self.vec1.clone(), &self.vec1.clone());
-        let norm2 = scala_cs_helper_u8(cs.clone(), &self.vec2.clone(), &self.vec2.clone());
-        let numerator = scala_cs_helper_u8(cs.clone(), &self.vec1.clone(), &self.vec2.clone());
-        let ten_thousand: Fq = (10000u64).into();
-        let ten_thousand_const = FpVar::<Fq>::Constant(ten_thousand);
+        let norm1 = scala_cs_helper_f(cs.clone(), &self.vec1.clone(), &self.vec1.clone());
+        let norm2 = scala_cs_helper_f(cs.clone(), &self.vec2.clone(), &self.vec2.clone());
+        let numerator = scala_cs_helper_f(cs.clone(), &self.vec1.clone(), &self.vec2.clone());
+        let ten_thousand: F = (10000u64).into();
+        let ten_thousand_const = FpVar::<F>::Constant(ten_thousand);
 
-        let threshold_fq: Fq = self.threshold.into();
-        let threshold_const = FpVar::<Fq>::Constant(threshold_fq);
+        let threshold_fq: F = self.threshold.into();
+        let threshold_const = FpVar::<F>::Constant(threshold_fq);
         let left = ten_thousand_const * numerator.clone() * numerator.clone();
         let right = threshold_const.clone() * threshold_const.clone() * norm2 * norm1;
 
@@ -57,6 +57,15 @@ fn mul_cs_helper_u8(cs: ConstraintSystemRef<Fq>, a: u8, c: u8) -> FqVar {
     a_var * c_var
 }
 
+fn mul_cs_helper_f<F: PrimeField>(cs: ConstraintSystemRef<F>, a: F, c: F) -> FpVar<F> {
+    let aa: F = a.into();
+    let cc: F = c.into();
+    let a_var = FpVar::<F>::new_witness(ark_relations::ns!(cs, "a gadget"), || Ok(aa)).unwrap();
+    let c_var = FpVar::<F>::new_witness(ark_relations::ns!(cs, "c gadget"), || Ok(cc)).unwrap();
+    a_var * c_var
+}
+
+
 fn scala_cs_helper_u8(cs: ConstraintSystemRef<Fq>, vec1: &[u8], vec2: &[u8]) -> FqVar {
     let _no_cs = cs.num_constraints();
     if vec1.len() != vec2.len() {
@@ -67,6 +76,21 @@ fn scala_cs_helper_u8(cs: ConstraintSystemRef<Fq>, vec1: &[u8], vec2: &[u8]) -> 
 
     for i in 0..vec1.len() {
         res += mul_cs_helper_u8(cs.clone(), vec1[i], vec2[i]);
+    }
+
+    res
+}
+
+fn scala_cs_helper_f<F: PrimeField>(cs: ConstraintSystemRef<F>, vec1: &[F], vec2: &[F]) -> FpVar<F> {
+    let _no_cs = cs.num_constraints();
+    if vec1.len() != vec2.len() {
+        panic!("scala mul: length not equal");
+    }
+    let mut res =
+        FpVar::<F>::new_witness(ark_relations::ns!(cs, "q1*q2 gadget"), || Ok(F::zero())).unwrap();
+
+    for i in 0..vec1.len() {
+        res += mul_cs_helper_f(cs.clone(), vec1[i], vec2[i]);
     }
 
     res

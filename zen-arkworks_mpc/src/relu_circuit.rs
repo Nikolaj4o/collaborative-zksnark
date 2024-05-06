@@ -24,15 +24,8 @@ impl <F: PrimeField>ConstraintSynthesizer<F> for ReLUCircuitOp3<F> {
         //zero point is constant wire in the circuit
 
         for i in 0..self.y_in.len() {
-            let cmp =
-                Boolean::new_witness(ark_relations::ns!(cs, "relu"), || {
-                    Ok(self.cmp_res[i])
-                })
-                .unwrap();
-            self.y_out[i]
-                .enforce_equal(&cmp.select(&self.y_in[i], &zero_var).unwrap())
-                .unwrap();
-
+            let cmp = self.y_in[i].is_cmp(&zero_var, std::cmp::Ordering::Greater, false).unwrap();
+            self.y_out[i].enforce_equal(&cmp.select(&self.y_in[i], &zero_var).unwrap()).unwrap();
         }
         Ok(())
     }

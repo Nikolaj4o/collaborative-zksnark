@@ -3,7 +3,7 @@ use ark_relations::r1cs::{
     ConstraintSystemRef, LinearCombination, Namespace, SynthesisError, Variable,
 };
 
-use core::borrow::Borrow;
+use core::{borrow::Borrow};
 
 use crate::{
     fields::{FieldOpsBounds, FieldVar},
@@ -428,18 +428,14 @@ impl<F: PrimeField> ToBitsGadget<F> for AllocatedFp<F> {
     
         let cs = self.cs.clone();
         use ark_ff::BitIteratorBE;
+        let val_bits;
         let mut bits = if let Some(value) = self.value {
-            
             let field_char = BitIteratorBE::new(F::characteristic());
-            
-            let bits: Vec<_> = BitIteratorBE::new(value.into_repr())
-                .zip(field_char)
-                .skip_while(|(_, c)| !c)
-                .map(|(b, _)| Some(b))
-                .collect();
-           
-            assert_eq!(bits.len(), F::Params::MODULUS_BITS as usize);
-            bits
+            let val = value.clone();
+            val_bits = val.bit_decomp();
+            let res: Vec<Option<&bool>> = val_bits.iter().zip(field_char).skip_while(|(_, c)| !c).map(|(b, _)| Some(b)).collect();
+            assert_eq!(res.len(), F::Params::MODULUS_BITS as usize);
+            res
         } else {
             vec![None; F::Params::MODULUS_BITS as usize]
         };

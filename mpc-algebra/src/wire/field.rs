@@ -1,26 +1,31 @@
+//use alloc::collections;
+use ark_poly::{domain, EvaluationDomain, GeneralEvaluationDomain};
+use ark_std::test_rng;
 use derivative::Derivative;
 use log::debug;
 use rand::Rng;
 use zeroize::Zeroize;
 
 use ark_ff::bytes::{FromBytes, ToBytes};
-use ark_ff::prelude::*;
+use ark_ff::{prelude::*, BigInteger64};
 use ark_ff::{poly_stub, FftField};
 use ark_serialize::{
     CanonicalDeserialize, CanonicalDeserializeWithFlags, CanonicalSerialize,
     CanonicalSerializeWithFlags, Flags, SerializationError,
 };
 use mpc_trait::MpcWire;
+use ark_ff::BitIteratorBE;
 
 use std::fmt::{self, Debug, Display, Formatter};
 use std::io::{self, Read, Write};
 use std::iter::{Product, Sum};
 use std::marker::PhantomData;
-use std::ops::*;
+use std::{ops::*, vec};
 
 use super::super::share::field::FieldShare;
 use super::super::share::BeaverSource;
-use crate::Reveal;
+use crate::bin::F2;
+use crate::{Reveal, SpdzFieldShare};
 use mpc_net::{MpcNet, MpcMultiNet as Net};
 
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -74,6 +79,15 @@ impl<T: Field, S: FieldShare<T>> BeaverSource<S, S, S> for DummyFieldTripleSourc
             }),
         )
     }
+    
+    fn nbit_val(&mut self, n: u32) -> S {
+        let rng = &mut test_rng();
+        let val = T::rand(rng);
+        let mut modulus = T::from(2u32);
+        modulus.pow([n as u64]);
+        print!("Modulus: {modulus}, N: {n}\n");
+        S::from_add_shared(T::from(val))
+    }
 }
 
 impl<T: Field, S: FieldShare<T>> MpcField<T, S> {
@@ -103,7 +117,77 @@ impl<T: Field, S: FieldShare<T>> MpcField<T, S> {
             Err(out_b)
         }
     }
+
 }
+// impl<F: PrimeField, S: FieldShare<F>> MpcField<F, S> {
+//     pub fn unbounded_fanin_or(bits: Vec<Self>) -> Self {
+//         let rng = &mut test_rng();
+//         let A: Self = Self::one() + bits.iter().sum();
+//         let bitlen = bits.len();
+//         let domain: GeneralEvaluationDomain::<Self> = GeneralEvaluationDomain::<Self>::new(bitlen + 1).unwrap();
+//         let mut evals = vec![Self::zero(); bitlen + 1];
+//         evals[bitlen] = Self::one();
+//         //end_timer!(build_domain_timer);
+//         //let ifft_timer = start_timer!(|| "ifft");
+//         domain.ifft_in_place(&mut evals);
+//         let mut b: Vec<Self> = vec![Self::zero(); bitlen].iter().map(|x| Self::from_add_shared(F::rand(rng))).collect();
+//         let b_p: Vec<Self> = vec![Self::zero(); bitlen].iter().map(|x| Self::from_add_shared(F::rand(rng))).collect();
+//         let B: Vec<Self> = b.iter().zip(b_p).map(|(a, b)| *a*b).collect();
+//         B.iter().map(|x| (*x).publicize());
+//         let b_inv = b_p.iter().zip(B).map(|(a, b)| (*a) * b.inv().unwrap());
+//         let mut b_shift = b.clone();
+//         b_shift.pop();
+//         b_shift = vec![Self::one();1].iter().chain(&b_shift).map(|x| *x).collect();
+//         let c: Vec<Self> = b_shift.iter().zip(b_inv).map(|(a, b)| A * (*a) * b).collect();
+//         c.iter().map(|x| (*x).publicize());
+//         let mut A_pows: Vec<Self> = b.iter().enumerate().map(|(i, x)| *x * c[0..i].iter().product()).collect();
+//         A_pows = vec![Self::one(); 1].iter().chain(&A_pows).map(|x| *x).collect();
+//         let result = vec![Self::one(); 1].iter().chain(&A_pows).zip(evals).map(|(a, b)| *a * b ).sum();
+//         result
+//     }
+//     pub fn prefix_or(bits: Vec<Self>) -> Vec<Self> {
+//         let lambda = (bits.len()).sqrt() as u32;
+//         let mut x = vec![Self::zero(); lambda];
+//         let mut y = vec![Self::zero(); lambda];
+//         for i in 0..lambda {
+//             x[i] = unbounded_fanin_or(bits[i * lambda..(i + 1)*lambda]);
+//         }
+//         for i in 0..lambda {
+//             y[i] = unbounded_fanin_or(x[0..i]);
+//         }
+//         let mut f = vec![Self::zero(); lambda];
+//         f[0] = x[0];
+//         for i in 1..lambda {
+//             f[i] = y[i] - y[i - 1];
+//         }
+//         let mut g = vec![Self::zero(); bits.len()];
+
+//         for i in 0..lambda {
+//             for j in 0..lambda {
+//                 g[i*lambda + j] = f[i] * a[i*lambda + j];
+//             }
+//         }
+
+//         for i in 0..lambda {
+//             c[i] = g[i * lambda..(i+1)*lambda].iter().sum();
+//         }
+
+//         let mut b_p = vec![Self::zero(); lambda];
+//         for i in 0..lambda {
+//             b_p[i] = unbounded_fanin_or(c[0..i]);
+//         }
+
+//         for i in 0..lambda {
+//             for j in 0..lambda {
+//                 g[i*lambda + j] = f[i] * a[i*lambda + j];
+//             }
+//         }
+//         g
+//     }
+//     pub fn bitwise_lt () {
+
+//     }
+// }
 impl<'a, T: Field, S: FieldShare<T>> MulAssign<&'a MpcField<T, S>> for MpcField<T, S> {
     #[inline]
     fn mul_assign(&mut self, other: &Self) {
@@ -533,6 +617,106 @@ impl<F: PrimeField, S: FieldShare<F>> PrimeField for MpcField<F, S> {
         //unimplemented!("No BigInt reprs for shared fields! (into_repr)")
         self.unwrap_as_public().into_repr()
     }
+    // fn modulo (&self, val: u32) -> Self {
+        
+    // }
+    fn trunc (&self, bits: u32) -> Self {
+        match self {
+             Self::Public(x) => Self::Public(x.trunc(bits)),
+             Self::Shared(x) => {
+                let rng = &mut test_rng();
+                let r_p = Self::from_add_shared(F::rand(rng).modulo(bits));
+                let mod_bit_len = Self::Params::MODULUS_BITS;
+                let mut r = Self::from_add_shared(F::rand(rng).modulo(mod_bit_len - bits));
+                let mut b = Self::from_public(2u128.pow(64).into());
+                let scalar = Self::from(2u32.pow(bits));
+                b.add(*self);
+                b.add(&r_p);
+                b.add(r * scalar);
+                let c = b.reveal();
+                let mut d = Self::from_public(c.modulo(bits));
+                d.sub(&r_p);
+                let mut a = *self;
+                a.sub(&d);
+                let inv = scalar.inverse().unwrap();
+                a *= inv;
+                //print!("Shared trunc protocol");
+                a
+             }
+        }
+    }
+    fn modulo (&self, bits: u32) -> Self {
+        match self {
+             Self::Public(x) => Self::Public(x.modulo(bits)),
+             Self::Shared(x) => {
+                let rng = &mut test_rng();
+                let r_p = Self::from_add_shared(F::rand(rng).modulo(bits));
+                let mod_bit_len = Self::Params::MODULUS_BITS;
+                let mut r = Self::from_add_shared(F::rand(rng).modulo(mod_bit_len - bits));
+                let mut b = Self::from_public(2u128.pow(64).into());
+                let scalar = Self::from(2u32.pow(bits));
+                b.add(self);
+                b.add(&r_p);
+                b.add(r * scalar);
+                //let c = b.reveal();
+                b.publicize();     
+                let mut d = b.modulo(bits);
+                d.sub(&r_p);
+                d
+             }
+        }
+    }
+
+    fn bit_decomp(&self) -> Vec<bool> {
+        match self {
+            Self::Public(x) => x.bit_decomp(),
+            Self::Shared(_) => {
+                let bitlen = Self::BigInt::NUM_LIMBS * 64;
+                let bits = vec![false; bitlen as usize];
+                let bits_f2: Vec<MpcField<F2, SpdzFieldShare<F2>>> = bits.iter().map(|x| MpcField::<F2, SpdzFieldShare<F2>>::from_add_shared((*x).into())).collect();
+                let bits_f: Vec<Self> = bits.iter().map(|x| (*x).into()).collect();
+                //let r_share_bits: Vec<MpcField<F2, SpdzFieldShare<F2>>> = bits.iter().map(|x| MpcField::<F2, SpdzFieldShare<F2>>::from_add_shared(F2::from(*x))).collect();
+                let mut c: Self = bits_f.iter().enumerate().map(|(i, x)| *x * Self::from(2u64).pow([i as u64])).sum();
+                c -= *self; 
+                c.publicize();
+                let c_bits = c.bit_decomp();
+                let c_bits_f2: Vec<MpcField<F2, SpdzFieldShare<F2>>> = c_bits.iter().map(|x| MpcField::<F2, SpdzFieldShare<F2>>::from_public((*x).into())).collect();
+                let mut carry_i = MpcField::<F2, SpdzFieldShare<F2>>::zero();
+                let mut z: Vec<MpcField<F2, SpdzFieldShare<F2>>> = vec![false.into(); bitlen as usize];
+                for i in 0..bitlen {
+                    z[i as usize] = carry_i + c_bits_f2[i as usize] + bits_f2[i as usize];
+                    carry_i = carry_i * ((bits_f2[i as usize] + carry_i) * (c_bits_f2[i as usize] + carry_i));
+                }
+                //let c = 
+                let res: Vec<bool> = z.iter().map(|x| (*x).into_repr().0 != [0 as u64]).collect();
+                res
+            }
+        }
+    }
+
+    // fn bit_decomp(&self) -> Vec<Self> {
+    //     match self {
+    //         Self::Public(x) => x.bit_decomp().iter().map(|b| Self::Public(*b)).collect(),
+    //         Self::Shared(x) => {
+    //             let rng = &mut test_rng();
+    //             let r = Self::from_public(F::rand(rng));
+    //             let r_bits = r.bit_decomp();
+    //             let c = *self - r;
+    //             c.publicize();
+    //             let c_bits = c.bit_decomp();
+    //             let d_bits: Vec<Self> = r_bits.iter().zip(c_bits).map(|(a, b)| *a - b).collect();
+    //             let p_bits = BitIteratorBE::new(F::Params::MODULUS).map(|x| Self::from_public(x.into())).collect();
+    //             let dxorp: Vec<Self> = d_bits.iter().zip(p_bits).map(|(a, b)| *a + b - (*a*b + *a*b)).collect();
+    //             let mut dprefix: Vec<Self> = vec![Self::zero(); dxorp.len()];
+    //             for i in 0..dxorp.len() {
+    //                 dprefix[i] = predix_or(dxorp[0..i]);
+    //             }
+    //             let mut l
+
+    //             self
+    //         }
+    //     }  
+    // }
 }
 
 impl<F: PrimeField, S: FieldShare<F>> SquareRootField for MpcField<F, S> {

@@ -11,16 +11,16 @@ use ark_ff::*;
 
 //stranded encoding for avg pool layer
 #[derive(Debug, Clone)]
-pub struct AvgPoolCircuitLv3 {
-    pub x: Vec<Vec<Vec<Vec<FqVar>>>>, // [Batch Size, Num Channel, Height, Width]
-    pub y: Vec<Vec<Vec<Vec<FqVar>>>>, // [Batch Size, Num Channel, Height/kernel_size, Width/kernel_size]
+pub struct AvgPoolCircuitLv3<F: PrimeField> {
+    pub x: Vec<Vec<Vec<Vec<FpVar<F>>>>>, // [Batch Size, Num Channel, Height, Width]
+    pub y: Vec<Vec<Vec<Vec<FpVar<F>>>>>, // [Batch Size, Num Channel, Height/kernel_size, Width/kernel_size]
     pub kernel_size: usize,
-    pub remainder: Vec<Vec<Vec<Vec<u8>>>>,
+    pub remainder: Vec<Vec<Vec<Vec<F>>>>,
     // we do not need the quantization parameters to calculate the avg pool output
 }
 
-impl ConstraintSynthesizer<Fq> for AvgPoolCircuitLv3 {
-    fn generate_constraints(self, cs: ConstraintSystemRef<Fq>) -> Result<(), SynthesisError> {
+impl <F: PrimeField>ConstraintSynthesizer<F> for AvgPoolCircuitLv3<F> {
+    fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
         #[cfg(debug_assertion)]
         println!(
             "AvgPoolCircuitU8BitDecomposeOptimized is setup mode: {}",
@@ -38,8 +38,8 @@ impl ConstraintSynthesizer<Fq> for AvgPoolCircuitLv3 {
 
         //let k_simd: usize = (254u32 / delta_bits_length) as usize;
         //let k_simd: usize = 1;
-        let kernel_size_fq: Fq = (self.kernel_size as u32).into();
-        let kernel_size_const = FpVar::<Fq>::Constant(kernel_size_fq);
+        let kernel_size_fq: F = (self.kernel_size as u32).into();
+        let kernel_size_const = FpVar::<F>::Constant(kernel_size_fq);
         for n in 0..num_images {
             for h in 0..(input_height / self.kernel_size) {
                 for w in 0..(input_width / self.kernel_size) {
@@ -54,8 +54,8 @@ impl ConstraintSynthesizer<Fq> for AvgPoolCircuitLv3 {
 
                         let yy_var = self.y[n][c][h][w].clone();
 
-                        let remainder: Fq = (self.remainder[n][c][h][w] as u64).into();
-                        let remainder_var = FpVar::<Fq>::new_witness(
+                        let remainder: F = self.remainder[n][c][h][w];
+                        let remainder_var = FpVar::<F>::new_witness(
                             ark_relations::ns!(cs, "remainder gadget"),
                             || Ok(remainder),
                         )
@@ -75,16 +75,16 @@ impl ConstraintSynthesizer<Fq> for AvgPoolCircuitLv3 {
     }
 }
 
-fn sum_helper_fq(
-    cs: ConstraintSystemRef<Fq>,
-    x: Vec<Vec<FqVar>>,
+fn sum_helper_fq<F: PrimeField>(
+    cs: ConstraintSystemRef<F>,
+    x: Vec<Vec<FpVar<F>>>,
     h_index: usize,
     w_index: usize,
     kernel_size: usize,
-) -> FqVar {
+) -> FpVar<F> {
     let mut tmp =
-        FpVar::<Fq>::new_witness(ark_relations::ns!(cs, "avg pool sum helper gadget"), || {
-            Ok(Fq::zero())
+        FpVar::<F>::new_witness(ark_relations::ns!(cs, "avg pool sum helper gadget"), || {
+            Ok(F::zero())
         })
         .unwrap();
     for i in h_index..(h_index + kernel_size) {

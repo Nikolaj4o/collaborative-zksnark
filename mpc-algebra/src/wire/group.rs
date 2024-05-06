@@ -69,6 +69,9 @@ impl<T: Group, S: GroupShare<T>> BeaverSource<S, S::FieldShare, S>
             }),
         )
     }
+    fn nbit_val(&mut self, n: u32) -> S::FieldShare {
+        todo!();
+    }
 }
 
 impl_ref_ops!(Add, AddAssign, add, add_assign, Group, GroupShare, MpcGroup);

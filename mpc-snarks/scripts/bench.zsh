@@ -8,6 +8,7 @@ proof=$1
 infra=$2
 size=$3
 n_parties=$4
+computation=$5
 if [[ -z $BIN ]]
 then
     BIN=./target/release/proof
@@ -24,7 +25,7 @@ function usage {
   exit 1
 }
 
-if [ "$#" -ne 4 ] ; then
+if [ "$#" -ne 5 ] ; then
     usage
 fi
 
@@ -52,10 +53,10 @@ case $infra in
           #$BIN $i ./data/4 &
           if [ $i -eq 0 ]
           then
-            $BIN -p $proof -c squaring --computation-size $size mpc --hosts $NETWORK_CONFIG --party $i --alg $infra > $infra$i$proof.log &  # | rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s' &
+            $BIN -p $proof -c $computation --computation-size $size mpc --hosts $NETWORK_CONFIG --party $i --alg $infra > $infra$computation$i$proof.log &  # | rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s' &
             pid=$!
           else
-            $BIN -p $proof -c squaring --computation-size $size mpc --hosts $NETWORK_CONFIG --party $i --alg $infra > ~/../../dev/null & 
+            $BIN -p $proof -c $computation --computation-size $size mpc --hosts $NETWORK_CONFIG --party $i --alg $infra > ~/../../dev/null & 
             pid=$!
           fi
           PROCS+=($pid)
@@ -67,10 +68,10 @@ case $infra in
         done
     ;;
     local)
-        $BIN -p $proof -c squaring --computation-size $size local > loc$proof.log #| rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'
+        $BIN -p $proof -c $computation --computation-size $size local > loc$computation$proof.log #| rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'
     ;;
     ark-local)
-        $BIN -p $proof -c squaring --computation-size $size ark-local | rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'
+        $BIN -p $proof -c $computation --computation-size $size ark-local | rg "End: *$LABEL" | rg -o '[0-9][0-9.]*.s'
     ;;
     *)
         usage

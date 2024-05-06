@@ -1,3 +1,5 @@
+use ark_ff::PrimeField;
+
 use crate::*;
 
 
@@ -18,7 +20,32 @@ pub fn relu_u8(input: &mut [u8], zero_point: u8) -> Vec<bool> {
 }
 
 #[allow(non_snake_case)]
+pub fn relu_f<F: PrimeField>(input: &mut [F], zero_point: F) -> Vec<bool> {
+    let mut cmp_res: Vec<bool> = Vec::new();
+    for e in input {
+        if *e < zero_point {
+            *e = zero_point;
+            cmp_res.push(false);
+        } else {
+            cmp_res.push(true);
+        }
+    }
+    cmp_res
+}
+
+#[allow(non_snake_case)]
 pub(crate) fn relu2d_u8(input: &mut Vec<Vec<u8>>, zero_point: u8) {
+    for i in 0..input.len() {
+        for j in 0..input[i].len() {
+            if input[i][j] < zero_point {
+                input[i][j] = zero_point;
+            }
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+pub(crate) fn relu2d_f<F: PrimeField>(input: &mut Vec<Vec<F>>, zero_point: F) {
     for i in 0..input.len() {
         for j in 0..input[i].len() {
             if input[i][j] < zero_point {
@@ -53,6 +80,53 @@ pub(crate) fn relu4d_u8(
     }
 
     cmp_res
+}
+
+pub(crate) fn relu4d_f<F: PrimeField>(
+    input: &mut Vec<Vec<Vec<Vec<F>>>>,
+    zero_point: F,
+) -> Vec<Vec<Vec<Vec<bool>>>> {
+    let mut cmp_res: Vec<Vec<Vec<Vec<bool>>>> =
+        vec![
+            vec![vec![vec![false; input[0][0][0].len()]; input[0][0].len()]; input[0].len()];
+            input.len()
+        ];
+    for i in 0..input.len() {
+        for j in 0..input[i].len() {
+            for k in 0..input[i][j].len() {
+                for l in 0..input[i][j][k].len() {
+                    if input[i][j][k][l] < zero_point {
+                        input[i][j][k][l] = zero_point;
+                        cmp_res[i][j][k][l] = false;
+                    } else {
+                        cmp_res[i][j][k][l] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    cmp_res
+}
+
+pub(crate) fn scalar_with_remainder_f<F: PrimeField>(a: &[F], b: &[F], a_0: F, b_0: F, y_0: F) -> F {
+    if a.len() != b.len() {
+        panic!("incorrect dim {} {}", a.len(), b.len());
+    }
+    let mut tmp1: F = F::zero();
+    let mut tmp2: F = F::zero();
+    let mut tmp3: F = F::zero();
+    let mut tmp4: F = F::zero();
+    for i in 0..a.len() {
+        tmp1 += a[i] * b[i];
+        tmp2 += a[i] * b_0;
+        tmp3 += a_0 * b[i];
+        tmp4 += a_0 * b_0;
+    }
+
+    let res = (tmp1 + tmp4 + y_0) - (tmp2 + tmp3);
+
+    res
 }
 
 pub(crate) fn scalar_with_remainder_u8(a: &[u8], b: &[u8], a_0: u8, b_0: u8, y_0: u64) -> u64 {
@@ -103,6 +177,35 @@ pub fn vec_mat_mul_with_remainder_u8(
     (remainder, div_res)
 }
 
+//return the remainder of divided by 2^24
+pub fn vec_mat_mul_with_remainder_f<F: PrimeField> (
+    vec: &[F],
+    mat: Vec<Vec<F>>,
+    res: &mut [F],
+    vec_0: F,
+    mat_0: F,
+    res_0: F,
+    multiplier: &[F],
+) -> (Vec<F>, Vec<F>) {
+    //record info loss during u64/u32 to u8 for later recovery
+    //println!("q1 before shift {:?}", mat[0].clone());
+    let mut remainder = vec![F::zero(); res.len()];
+    let mut div_res = vec![F::zero(); res.len()];
+    let f22: F = 2u64.pow(22).into();
+    for i in 0..mat.len() {
+        //let m = (multiplier[i] * 2u64.pow(22) as f32) as u64;
+        let res_converted = (res_0 * f22) / multiplier[i];
+        let scalar_tmp =
+            multiplier[i] * scalar_with_remainder_f(vec, &mat[i], vec_0, mat_0, res_converted);
+        remainder[i] = scalar_tmp.modulo(22);
+        div_res[i] = scalar_tmp.trunc(30);
+        res[i] = scalar_tmp.trunc(22);
+    }
+
+    //println!("res {:?}", res);
+    (remainder, div_res)
+}
+
 fn conv_kernel_scala_with_remainder_u8(
     x: &Vec<Vec<Vec<u8>>>,
     kernel: &Vec<Vec<Vec<u8>>>,
@@ -144,6 +247,99 @@ fn conv_kernel_scala_with_remainder_u8(
     let res = (tmp1 + tmp4 + y_0) - (tmp2 + tmp3);
 
     res
+}
+
+fn conv_kernel_scala_with_remainder_f<F: PrimeField>(
+    x: &Vec<Vec<Vec<F>>>,
+    kernel: &Vec<Vec<Vec<F>>>,
+    h_index: usize,
+    w_index: usize,
+
+    x_zeropoint: F,
+    kernel_zeropoint: F,
+    y_0: F,
+) -> F {
+    let num_channels = kernel.len();
+    let kernel_size = kernel[0].len();
+    let mut tmp1 = F::zero();
+    let mut tmp2 = F::zero();
+    let mut tmp3 = F::zero();
+    let mut tmp4 = F::zero();
+    //println!("multiplier : {}\n y_converted : {}", m, y_converted);
+    for i in 0..num_channels {
+        //iterate through all channels
+
+        for j in h_index..(h_index + kernel_size) {
+            // println!("data {:?}", &x[i][j][w_index..w_index+kernel_size]);
+            // println!("kernel {:?}", &kernel[i][j][0..kernel_size]);
+            for k in w_index..(w_index + kernel_size) {
+                //println!("i,j,k {} {} {}",i, j - h_index, k - w_index);
+                tmp1 += x[i][j][k] * kernel[i][j - h_index][k - w_index];
+
+                tmp2 += x[i][j][k] * kernel_zeropoint;
+                tmp3 += kernel[i][j - h_index][k - w_index] * x_zeropoint;
+
+                tmp4 += x_zeropoint * kernel_zeropoint;
+            }
+        }
+    }
+    //println!("conv output {}  {} ", tmp1 *m +  tmp4*m, tmp2*m + tmp3*m,);
+    //assert_eq!(tmp1, tmp2);
+
+    //println!("tmp14 {}\ntmp23{}", tmp1+ tmp4, tmp2+ tmp3);
+    let res = (tmp1 + tmp4 + y_0) - (tmp2 + tmp3);
+
+    res
+}
+
+pub(crate) fn vec_conv_with_remainder_f<F: PrimeField>(
+    vec: &Vec<Vec<Vec<Vec<F>>>>,
+    kernel: &Vec<Vec<Vec<Vec<F>>>>,
+    res: &mut Vec<Vec<Vec<Vec<F>>>>,
+    vec_0: F,
+    kernel_0: F,
+    res_0: F,
+    multiplier: &[F],
+) -> (Vec<Vec<Vec<Vec<F>>>>, Vec<Vec<Vec<Vec<F>>>>) {
+    let num_kernels = kernel.len();
+    let kernel_size = kernel[0][0].len();
+    let batch_size = vec.len();
+    let input_height = vec[0][0].len();
+    let input_width = vec[0][0][0].len();
+    let f22: F = 2u64.pow(22).into();
+    //println!("kernel {:?}", kernel.clone());
+    //record info loss during u64/u32 to u8 for later recovery
+    let mut remainder =
+        vec![vec![vec![vec![F::zero(); res[0][0][0].len()]; res[0][0].len()]; res[0].len()]; res.len()];
+    let mut div =
+        vec![vec![vec![vec![F::zero(); res[0][0][0].len()]; res[0][0].len()]; res[0].len()]; res.len()];
+    for n in 0..batch_size {
+        for h in 0..(input_height - kernel_size + 1) {
+            for w in 0..(input_width - kernel_size + 1) {
+                for k in 0..num_kernels {
+                    //println!("{} {} {} {}",n, k, h, w);
+                    let m = multiplier[k];// * 2u64.pow(22) as f32) as u64;
+                    let res_converted = (res_0 * f22) / m;
+                    let tmp = m * conv_kernel_scala_with_remainder_f(
+                        &vec[n],
+                        &kernel[k],
+                        h,
+                        w,
+                        vec_0,
+                        kernel_0,
+                        res_converted,
+                    );
+
+                    res[n][k][h][w] = tmp.trunc(22);
+
+                    remainder[n][k][h][w] = tmp.modulo(22);
+                    div[n][k][h][w] = tmp.trunc(30);
+                }
+            }
+        }
+    }
+    //println!("kernel shape ({},{},{},{})", K,C,kernel_size,kernel_size);
+    (remainder, div)
 }
 
 pub(crate) fn vec_conv_with_remainder_u8(
@@ -215,6 +411,26 @@ pub(crate) fn avg_pool_with_remainder_helper_u8(
     )
 }
 
+pub(crate) fn avg_pool_with_remainder_helper_f<F: PrimeField>(
+    input: &Vec<Vec<F>>,
+    h_start: usize,
+    w_start: usize,
+    kernel_size: usize,
+) -> (F, F) {
+    let mut res: F = F::zero();
+
+    for i in h_start..(h_start + kernel_size) {
+        for j in w_start..(w_start + kernel_size) {
+            res += input[i][j];
+        }
+    }
+
+    (
+        (res.trunc(2 as u32)),
+        (res.modulo(2)),
+    )
+}
+
 pub(crate) fn avg_pool_helper_u8(
     input: &Vec<Vec<u8>>,
     h_start: usize,
@@ -231,6 +447,57 @@ pub(crate) fn avg_pool_helper_u8(
 
     (res / (kernel_size as u32 * kernel_size as u32)) as u8
 }
+
+pub(crate) fn avg_pool_helper_f<F: PrimeField>(
+    input: &Vec<Vec<F>>,
+    h_start: usize,
+    w_start: usize,
+    kernel_size: usize,
+) -> F {
+    let mut res: F = F::zero();
+
+    for i in h_start..(h_start + kernel_size) {
+        for j in w_start..(w_start + kernel_size) {
+            res += input[i][j];
+        }
+    }
+
+    res.trunc(2)
+}
+
+pub(crate) fn avg_pool_scala_f<F: PrimeField>(
+    vec: &Vec<Vec<Vec<Vec<F>>>>,
+    kernel_size: usize,
+) -> Vec<Vec<Vec<Vec<F>>>> {
+    let batch_size = vec.len();
+    let num_channels = vec[0].len(); //num of channels
+    let input_height = vec[0][0].len(); // height of image
+    let input_width = vec[0][0][0].len(); // width of image
+    let mut output = vec![
+        vec![
+            vec![vec![F::zero(); input_width / kernel_size]; input_height / kernel_size];
+            num_channels
+        ];
+        batch_size
+    ];
+
+    for n in 0..batch_size {
+        for c in 0..num_channels {
+            for h in 0..(input_height / kernel_size) {
+                for w in 0..(input_width / kernel_size) {
+                    output[n][c][h][w] = avg_pool_helper_f(
+                        &vec[n][c],
+                        kernel_size * h,
+                        kernel_size * w,
+                        kernel_size,
+                    );
+                }
+            }
+        }
+    }
+    output
+}
+
 pub(crate) fn avg_pool_scala_u8(
     vec: &Vec<Vec<Vec<Vec<u8>>>>,
     kernel_size: usize,
@@ -263,6 +530,38 @@ pub(crate) fn avg_pool_scala_u8(
     output
 }
 
+pub(crate) fn avg_pool_with_remainder_scala_f<F: PrimeField>(
+    vec: &Vec<Vec<Vec<Vec<F>>>>,
+    kernel_size: usize,
+) -> (Vec<Vec<Vec<Vec<F>>>>, Vec<Vec<Vec<Vec<F>>>>) {
+    let batch_size = vec.len();
+    let num_channels = vec[0].len(); //num of channels
+    let input_height = vec[0][0].len(); // height of image
+    let input_width = vec[0][0][0].len(); // width of image
+    let mut output =
+        vec![vec![vec![vec![F::zero(); input_width / 2]; input_height / 2]; num_channels]; batch_size];
+    let mut remainder =
+        vec![vec![vec![vec![F::zero(); input_width]; input_height]; num_channels]; batch_size];
+
+    for n in 0..batch_size {
+        for c in 0..num_channels {
+            for h in 0..(input_height / kernel_size) {
+                for w in 0..(input_width / kernel_size) {
+                    let (res, remained) = avg_pool_with_remainder_helper_f(
+                        &vec[n][c],
+                        kernel_size * h,
+                        kernel_size * w,
+                        kernel_size,
+                    );
+                    output[n][c][h][w] = res;
+                    remainder[n][c][h][w] = remained;
+                }
+            }
+        }
+    }
+    (output, remainder)
+}
+
 pub(crate) fn avg_pool_with_remainder_scala_u8(
     vec: &Vec<Vec<Vec<Vec<u8>>>>,
     kernel_size: usize,
@@ -293,6 +592,159 @@ pub(crate) fn avg_pool_with_remainder_scala_u8(
         }
     }
     (output, remainder)
+}
+
+pub fn lenet_circuit_forward_f<F: PrimeField>(
+    x: Vec<Vec<Vec<Vec<F>>>>,
+    conv1_kernel: Vec<Vec<Vec<Vec<F>>>>,
+    conv2_kernel: Vec<Vec<Vec<Vec<F>>>>,
+    conv3_kernel: Vec<Vec<Vec<Vec<F>>>>,
+    fc1_weight: Vec<Vec<F>>,
+    fc2_weight: Vec<Vec<F>>,
+    x_0: F,
+    conv1_output_0: F,
+    conv2_output_0: F,
+    conv3_output_0: F,
+    fc1_output_0: F,
+    fc2_output_0: F,
+    conv1_weights_0: F,
+    conv2_weights_0: F,
+    conv3_weights_0: F,
+    fc1_weights_0: F,
+    fc2_weights_0: F,
+    multiplier_conv1: Vec<F>,
+    multiplier_conv2: Vec<F>,
+    multiplier_conv3: Vec<F>,
+    multiplier_fc1: Vec<F>,
+    multiplier_fc2: Vec<F>,
+) -> Vec<Vec<F>> {
+    println!("lenet vallina forward");
+    //layer 1
+    let mut conv1_output = vec![vec![vec![vec![F::zero(); x[0][0][0].len() - conv1_kernel[0][0][0].len() + 1];  // w - kernel_size + 1
+                                        x[0][0].len() - conv1_kernel[0][0].len() + 1]; // h - kernel_size + 1
+                                        conv1_kernel.len()]; //number of conv kernels
+                                        x.len()]; //input (image) batch size
+    vec_conv_with_remainder_f(
+        &x,
+        &conv1_kernel,
+        &mut conv1_output,
+        x_0,
+        conv1_weights_0,
+        conv1_output_0,
+        &multiplier_conv1,
+    );
+
+    //layer 1
+
+    relu4d_f(&mut conv1_output, conv1_output_0);
+
+    let avg_pool1_output = avg_pool_scala_f(&conv1_output, 2);
+    //println!("{} {} {} ", avg_pool1_output[0].len() , avg_pool1_output[0][0].len() , avg_pool1_output[0][0][0].len());
+
+    //layer 2
+
+    let mut conv2_output = vec![vec![vec![vec![F::zero(); avg_pool1_output[0][0][0].len() - conv2_kernel[0][0][0].len()+ 1];  // w - kernel_size + 1
+                                                                        avg_pool1_output[0][0].len() - conv2_kernel[0][0].len()+ 1]; // h - kernel_size + 1
+                                                                        conv2_kernel.len()]; //number of conv kernels
+                                                                        avg_pool1_output.len()]; //input (image) batch size
+    vec_conv_with_remainder_f(
+        &avg_pool1_output,
+        &conv2_kernel,
+        &mut conv2_output,
+        conv1_output_0,
+        conv2_weights_0,
+        conv2_output_0,
+        &multiplier_conv2,
+    );
+    relu4d_f(&mut conv2_output, conv2_output_0);
+
+    let avg_pool2_output = avg_pool_scala_f(&conv2_output, 2);
+    //println!("{} {} {} ", avg_pool2_output[0].len() , avg_pool2_output[0][0].len() , avg_pool2_output[0][0][0].len());
+
+    //layer 3
+    let mut conv3_output = vec![vec![vec![vec![F::zero(); avg_pool2_output[0][0][0].len() - conv3_kernel[0][0][0].len()+ 1];  // w - kernel_size + 1
+                                                                        avg_pool2_output[0][0].len() - conv3_kernel[0][0].len()+ 1]; // h - kernel_size + 1
+                                                                        conv3_kernel.len()]; //number of conv kernels
+                                                                        avg_pool2_output.len()]; //input (image) batch size
+    vec_conv_with_remainder_f(
+        &avg_pool2_output,
+        &conv3_kernel,
+        &mut conv3_output,
+        conv2_output_0,
+        conv3_weights_0,
+        conv3_output_0,
+        &multiplier_conv3,
+    );
+
+    relu4d_f(&mut conv3_output, conv3_output_0);
+    //println!("{} {} {} ", conv3_output[0].len() , conv3_output[0][0].len() , conv3_output[0][0][0].len());
+
+    //at the end of layer 3 we have to transform conv3_output to different shape to fit in FC layer.
+    // previous shape is [batch size, xxx, 1, 1]. we  want to reshape it to [batch size, xxx]
+    let mut transformed_conv3_output =
+        vec![
+            vec![
+                F::zero();
+                conv3_output[0].len() * conv3_output[0][0].len() * conv3_output[0][0][0].len()
+            ];
+            conv3_output.len()
+        ];
+    for i in 0..conv3_output.len() {
+        let mut counter = 0;
+        for j in 0..conv3_output[0].len() {
+            for p in 0..conv3_output[0][0].len() {
+                for q in 0..conv3_output[0][0][0].len() {
+                    transformed_conv3_output[i][counter] = conv3_output[i][j][p][q];
+                    counter += 1;
+                }
+            }
+        }
+    }
+    //println!("flattened conv3 output shape {} {}", transformed_conv3_output.len(), transformed_conv3_output[0].len());
+    #[cfg(debug_assertion)]
+    println!(
+        " FC layer input len : {}, FC layer weight len {}",
+        transformed_conv3_output[0].len(),
+        fc1_weight[0].len()
+    );
+    //layer 4
+    let mut fc1_output = vec![vec![F::zero(); fc1_weight.len()];  // channels
+                                                transformed_conv3_output.len()]; //batch size
+    //let fc1_weight_ref: Vec<&[u8]> = fc1_weight.iter().map(|x| x.as_ref()).collect();
+
+    for i in 0..transformed_conv3_output.len() {
+        //iterate through each image in the batch
+        vec_mat_mul_with_remainder_f(
+            &transformed_conv3_output[i],
+            fc1_weight.clone(),
+            &mut fc1_output[i],
+            conv3_output_0,
+            fc1_weights_0,
+            fc1_output_0,
+            &multiplier_fc1,
+        );
+    }
+    relu2d_f(&mut fc1_output, fc1_output_0);
+
+    //layer 5
+    let mut fc2_output = vec![vec![F::zero(); fc2_weight.len()]; // channels
+                                                    fc1_output.len()]; //batch size
+    //let fc2_weight_ref: Vec<&[u8]> = fc2_weight.iter().map(|x| x.as_ref()).collect();
+
+    for i in 0..fc1_output.len() {
+        //iterate through each image in the batch
+        vec_mat_mul_with_remainder_f(
+            &fc1_output[i],
+            fc2_weight.clone(),
+            &mut fc2_output[i],
+            fc1_output_0,
+            fc2_weights_0,
+            fc2_output_0,
+            &multiplier_fc2,
+        );
+    }
+
+    fc2_output
 }
 
 pub fn lenet_circuit_forward_u8(
@@ -511,6 +963,25 @@ pub fn cosine_similarity(vec1: Vec<u8>, vec2: Vec<u8>, threshold: u32) -> bool {
     res
 }
 
+pub fn vec_mat_mul_cos_helper_f<F: PrimeField>(vec: &[F], mat: &[F]) -> F {
+    let mut res = F::zero();
+    for i in 0..mat.len() {
+        res += vec[i] * mat[i];
+    }
+    res
+}
+
+pub fn cosine_similarity_f<F: PrimeField>(vec1: Vec<F>, vec2: Vec<F>, threshold: F) -> bool {
+    let norm_1 = vec_mat_mul_cos_helper_f(&vec1, &vec1);
+    let norm_2 = vec_mat_mul_cos_helper_f(&vec2, &vec2);
+    let numerator = vec_mat_mul_cos_helper_f(&vec1, &vec2);
+
+    let res: bool =
+        (F::from(10000 as u64) * numerator * numerator) > threshold  * threshold * norm_1 * norm_2;
+
+    res
+}
+
 pub fn argmax_u8(input: Vec<u8>) -> usize {
     let mut res = 0usize;
     let mut tmp_max = 0u8;
@@ -523,6 +994,17 @@ pub fn argmax_u8(input: Vec<u8>) -> usize {
     res
 }
 
+pub fn argmax_f<F: PrimeField>(input: Vec<F>) -> usize {
+    let mut res = 0usize;
+    let mut tmp_max = F::zero();
+    for i in 0..input.len() {
+        if input[i] > tmp_max {
+            tmp_max = input[i];
+            res = i;
+        }
+    }
+    res
+}
 
 //TODO LIANKE remove them???
 // /// commit the account, output the commitment, and a openning (randomness)

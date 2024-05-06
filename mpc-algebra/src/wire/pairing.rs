@@ -60,6 +60,10 @@ impl<E: PairingEngine, S: PairingShare<E>>
     fn inv_pair(&mut self) -> (MpcG2Projective<E, S>, MpcG2Projective<E, S>) {
         unimplemented!("No inverses from Pairing triple source")
     }
+
+    fn nbit_val(&mut self, n: u32) -> MpcG2Projective<E, S> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Derivative)]
