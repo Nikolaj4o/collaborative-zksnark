@@ -452,6 +452,7 @@ impl<F: Field> ConstraintSystem<F> {
         // iterations, and then sees if it should be outlined, and if so adds
         // the outlining to the map.
         //
+        println!("Before transforming LC map");
         self.transform_lc_map(&mut |cs, num_times_used, inlined_lc| {
             let mut should_dedicate_a_witness_variable = false;
             let mut new_witness_index = None;
@@ -502,6 +503,7 @@ impl<F: Field> ConstraintSystem<F> {
             }
         });
 
+        println!("After transforming LC map");
         // Add the constraints for the newly added witness variables.
         for (new_witness_linear_combination, new_witness_variable) in
             new_witness_linear_combinations
