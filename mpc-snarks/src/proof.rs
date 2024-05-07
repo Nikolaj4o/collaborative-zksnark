@@ -1372,7 +1372,7 @@ fn main() {
                 Computation::Face => opt.field.run::<ark_bls12_377::Bls12_377, _>(
                     opt.computation,
                     opt.computation_size,
-                    shallownet::groth::Groth16Bench,
+                    face::groth::Groth16Bench,
                     TIMED_SECTION_LABEL,
                 ),
                 Computation::Cifar => opt.field.run::<ark_bls12_377::Bls12_377, _>(

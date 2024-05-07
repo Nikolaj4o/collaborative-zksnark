@@ -329,7 +329,6 @@ impl<F: Field> ConstraintSystem<F> {
             // Inline the LC, unwrapping symbolic LCs that may constitute it,
             // and updating them according to transformations in prior iterations.
             //let lc_timer = start_timer!(|| "Inlining current LC");
-            println!("Inlining current LCs");
             for &(coeff, var) in lc.iter() {
                 if var.is_lc() {
                     let lc_index = var.get_lc_index().expect("should be lc");
@@ -373,7 +372,6 @@ impl<F: Field> ConstraintSystem<F> {
             //end_timer!(lc_timer);
             //let lc_trans_timer = start_timer!(|| "Transforming current LC");
             transformed_lc.compactify();
-            println!("After Inlining current LCs");
             // Call the transformer function.
             let (num_new_witness_variables, new_witness_assignments) =
                 transformer(&self, num_times_used[index.0], &mut transformed_lc);
@@ -396,6 +394,7 @@ impl<F: Field> ConstraintSystem<F> {
             }
             //end_timer!(lc_supply_timer);
         }
+        
         end_timer!(trans_lc_time);
         // Replace the LC map.
         self.lc_map = transformed_lc_map;
