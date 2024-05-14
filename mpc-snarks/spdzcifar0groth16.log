@@ -1,5 +1,5 @@
 Start:   Connecting
-End:     Connecting ................................................................16.701ms
+End:     Connecting ................................................................6.761ms
 Start:   Preprocessing
 lenet vallina forward
 ··Start:   Groth16::Generator
@@ -21,45 +21,47 @@ FC2 850 10002754
 Commit 155603
 Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 10178507
 FullCircuit 10178507
-····End:     Constraint synthesis ..................................................8.460s
+····End:     Constraint synthesis ..................................................8.832s
 ····Start:   Inlining LCs
+Before transforming LC map
 ······Start:   Transforming LCs
-······End:     Transforming LCs ....................................................12.225s
-····End:     Inlining LCs ..........................................................24.495s
+······End:     Transforming LCs ....................................................11.951s
+After transforming LC map
+····End:     Inlining LCs ..........................................................23.994s
 ····Start:   Constructing evaluation domain
-····End:     Constructing evaluation domain ........................................16.292µs
+····End:     Constructing evaluation domain ........................................15.541µs
 ····Start:   R1CS to QAP Instance Map with Evaluation
 ······Start:   Evaluate Lagrange coefficients
-······End:     Evaluate Lagrange coefficients ......................................2.391s
-····End:     R1CS to QAP Instance Map with Evaluation ..............................36.860s
+······End:     Evaluate Lagrange coefficients ......................................2.453s
+····End:     R1CS to QAP Instance Map with Evaluation ..............................39.943s
 ····Start:   Compute G2 table
-····End:     Compute G2 table ......................................................2.094s
+····End:     Compute G2 table ......................................................2.112s
 ····Start:   Calculate B G2
-····End:     Calculate B G2 ........................................................145.588s
+····End:     Calculate B G2 ........................................................148.783s
 ····Start:   Compute G1 window table
-····End:     Compute G1 window table ...............................................1.803s
+····End:     Compute G1 window table ...............................................1.847s
 ····Start:   Generate the R1CS proving key
 ······Start:   Calculate A
-······End:     Calculate A .........................................................80.988s
+······End:     Calculate A .........................................................84.646s
 ······Start:   Calculate B G1
-······End:     Calculate B G1 ......................................................44.201s
+······End:     Calculate B G1 ......................................................45.596s
 ······Start:   Calculate H
-······End:     Calculate H .........................................................176.354s
+······End:     Calculate H .........................................................179.069s
 ······Start:   Calculate L
-······End:     Calculate L .........................................................84.037s
-····End:     Generate the R1CS proving key .........................................385.586s
+······End:     Calculate L .........................................................87.408s
+····End:     Generate the R1CS proving key .........................................396.728s
 ····Start:   Generate the R1CS verification key
-····End:     Generate the R1CS verification key ....................................35.522ms
+····End:     Generate the R1CS verification key ....................................39.223ms
 ····Start:   Convert proving key elements to affine
-····End:     Convert proving key elements to affine ................................70.468s
-··End:     Groth16::Generator ......................................................676.140s
+····End:     Convert proving key elements to affine ................................76.415s
+··End:     Groth16::Generator ......................................................699.480s
 ··Start:   MPC Proof
 ····Start:   Preprocessing
 lenet vallina forward
-····End:     Preprocessing .........................................................171.096s
+····End:     Preprocessing .........................................................170.815s
 ····Start:   timed section
 ······Start:   zk sampling
-······End:     zk sampling .........................................................1.709µs
+······End:     zk sampling .........................................................875ns
 ······Start:   Groth16::Prover
 ········Start:   Constraint synthesis
 we don't use old SIMD
@@ -79,6 +81,8 @@ FC2 850 10002754
 Commit 155603
 Number of constraints for ArgmaxCircuitU8 Circuit 20150, Accumulated constraints 10178507
 FullCircuit 10178507
-········End:     Constraint synthesis ..............................................3282.356s
+········End:     Constraint synthesis ..............................................413.441s
 ········Start:   Inlining LCs
+Before transforming LC map
 ··········Start:   Transforming LCs
+··········End:     Transforming LCs ................................................43.813s

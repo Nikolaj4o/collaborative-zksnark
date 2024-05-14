@@ -673,23 +673,24 @@ impl<F: PrimeField, S: FieldShare<F>> PrimeField for MpcField<F, S> {
             Self::Shared(_) => {
                 let bitlen = Self::BigInt::NUM_LIMBS * 64;
                 let bits = vec![false; bitlen as usize];
-                let bits_f2: Vec<MpcField<F2, SpdzFieldShare<F2>>> = bits.iter().map(|x| MpcField::<F2, SpdzFieldShare<F2>>::from_add_shared((*x).into())).collect();
-                let bits_f: Vec<Self> = bits.iter().map(|x| (*x).into()).collect();
-                //let r_share_bits: Vec<MpcField<F2, SpdzFieldShare<F2>>> = bits.iter().map(|x| MpcField::<F2, SpdzFieldShare<F2>>::from_add_shared(F2::from(*x))).collect();
-                let mut c: Self = bits_f.iter().enumerate().map(|(i, x)| *x * Self::from(2u64).pow([i as u64])).sum();
-                c -= *self; 
-                c.publicize();
-                let c_bits = c.bit_decomp();
-                let c_bits_f2: Vec<MpcField<F2, SpdzFieldShare<F2>>> = c_bits.iter().map(|x| MpcField::<F2, SpdzFieldShare<F2>>::from_public((*x).into())).collect();
-                let mut carry_i = MpcField::<F2, SpdzFieldShare<F2>>::zero();
-                let mut z: Vec<MpcField<F2, SpdzFieldShare<F2>>> = vec![false.into(); bitlen as usize];
-                for i in 0..bitlen {
-                    z[i as usize] = carry_i + c_bits_f2[i as usize] + bits_f2[i as usize];
-                    carry_i = carry_i * ((bits_f2[i as usize] + carry_i) * (c_bits_f2[i as usize] + carry_i));
-                }
-                //let c = 
-                let res: Vec<bool> = z.iter().map(|x| (*x).into_repr().0 != [0 as u64]).collect();
-                res
+                bits
+                // let bits_f2: Vec<MpcField<F2, SpdzFieldShare<F2>>> = bits.iter().map(|x| MpcField::<F2, SpdzFieldShare<F2>>::from_add_shared((*x).into())).collect();
+                // let bits_f: Vec<Self> = bits.iter().map(|x| (*x).into()).collect();
+                // //let r_share_bits: Vec<MpcField<F2, SpdzFieldShare<F2>>> = bits.iter().map(|x| MpcField::<F2, SpdzFieldShare<F2>>::from_add_shared(F2::from(*x))).collect();
+                // let mut c: Self = bits_f.iter().enumerate().map(|(i, x)| *x * Self::from(2u64).pow([i as u64])).sum();
+                // c -= *self; 
+                // c.publicize();
+                // let c_bits = c.bit_decomp();
+                // let c_bits_f2: Vec<MpcField<F2, SpdzFieldShare<F2>>> = c_bits.iter().map(|x| MpcField::<F2, SpdzFieldShare<F2>>::from_public((*x).into())).collect();
+                // let mut carry_i = MpcField::<F2, SpdzFieldShare<F2>>::zero();
+                // let mut z: Vec<MpcField<F2, SpdzFieldShare<F2>>> = vec![false.into(); bitlen as usize];
+                // for i in 0..bitlen {
+                //     z[i as usize] = carry_i + c_bits_f2[i as usize] + bits_f2[i as usize];
+                //     carry_i = carry_i * ((bits_f2[i as usize] + carry_i) * (c_bits_f2[i as usize] + carry_i));
+                // }
+                // //let c = 
+                // let res: Vec<bool> = z.iter().map(|x| (*x).into_repr().0 != [0 as u64]).collect();
+                // res
             }
         }
     }
